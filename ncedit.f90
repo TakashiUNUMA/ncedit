@@ -37,6 +37,7 @@ program ncedit
   read(10,nml=param)
   close(unit=10)
 
+  if(debug_level.ge.100) print '(a30)',     "----- values on namelist -----"
   if(debug_level.ge.100) print '(a18,i6)',  " imax          = ", imax
   if(debug_level.ge.100) print '(a18,i6)',  " jmax          = ", jmax
   if(debug_level.ge.100) print '(a18,i6)',  " kmax          = ", kmax
@@ -53,6 +54,8 @@ program ncedit
   if(debug_level.ge.100) print '(a18,f6.3)',"  dy           = ", dy
   if(debug_level.ge.100) print '(a18,i6)',  " deflate_level = ", deflate_level
   if(debug_level.ge.100) print '(a18,i6)',  " debug_level   = ", debug_level
+  if(debug_level.ge.100) print '(a30)',     "----- values on namelist -----"
+  if(debug_level.ge.100) print *, ""
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Initialization
@@ -75,31 +78,31 @@ program ncedit
   ! open the original netcdf file
   call check( nf90_open(input, nf90_nowrite, ncid) )
   if(debug_level.ge.100) print *, "Success: open the file"
-  if(debug_level.ge.100) print *, " ncid          = ", ncid
+  if(debug_level.ge.200) print *, " ncid          = ", ncid
 
   ! inquire and get x coordinate
   call check( nf90_inq_varid(ncid, 'ni', xdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the xdimid"
-  if(debug_level.ge.100) print *, " xdimid        = ", xdimid
+  if(debug_level.ge.200) print *, " xdimid        = ", xdimid
   call check( nf90_get_var(ncid, xdimid, x) )
   if(debug_level.ge.100) print *, "Success: get the x coordinate"
-  if(debug_level.ge.100) print *, " x(:)          = ", x
+  if(debug_level.ge.200) print *, " x(:)          = ", x
 
   ! inquire and get y coordinate
   call check( nf90_inq_varid(ncid, 'nj', ydimid) )
   if(debug_level.ge.100) print *, "Success: inquire the ydimid"
-  if(debug_level.ge.100) print *, " ydimid        = ", ydimid
+  if(debug_level.ge.200) print *, " ydimid        = ", ydimid
   call check( nf90_get_var(ncid, ydimid, y) )
   if(debug_level.ge.100) print *, "Success: get the y coordinate"
-  if(debug_level.ge.100) print *, " y(:)          = ", y
+  if(debug_level.ge.200) print *, " y(:)          = ", y
 
   ! inquire and get z coordinate
   call check( nf90_inq_varid(ncid, 'nk', zdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the zdimid"
-  if(debug_level.ge.100) print *, " zdimid        = ", zdimid
+  if(debug_level.ge.200) print *, " zdimid        = ", zdimid
   call check( nf90_get_var(ncid, zdimid, z) )
   if(debug_level.ge.100) print *, "Success: get the z coordinate"
-  if(debug_level.ge.100) print *, " z(:)          = ", z
+  if(debug_level.ge.200) print *, " z(:)          = ", z
   !  if(debug_level.ge.100) then
   !     do k = 1, kmax, 1
   !        print *, " z(",k,") = ", z(k)
@@ -109,19 +112,21 @@ program ncedit
   ! inquire and get time coordinate
   call check( nf90_inq_varid(ncid, 'time', tdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the tdimid"
-  if(debug_level.ge.100) print *, " tdimid        = ", tdimid
+  if(debug_level.ge.200) print *, " tdimid        = ", tdimid
   call check( nf90_get_var(ncid, tdimid, time) )
   if(debug_level.ge.100) print *, "Success: get the time coordinate"
-  if(debug_level.ge.100) print *, " time(:)       = ", time
+  if(debug_level.ge.200) print *, " time(:)       = ", time
+  if(debug_level.ge.100) print *, ""
 
   
   ! inquire and get var
+  if(debug_level.ge.100) print *, "varname of ",trim(varname)," is selected"
   select case (varname)
   case ('water')
      ! for all water (qc+qr+qi+qc+qg) on the microphysics processes
      call check( nf90_inq_varid(ncid, "qc", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.100) print *, " varid         = ", varid
+     if(debug_level.ge.200) print *, " varid         = ", varid
      call check( nf90_get_var(ncid, varid, var_in) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -129,7 +134,7 @@ program ncedit
      
      call check( nf90_inq_varid(ncid, "qr", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.100) print *, " varid         = ", varid
+     if(debug_level.ge.200) print *, " varid         = ", varid
      call check( nf90_get_var(ncid, varid, var_in) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -137,7 +142,7 @@ program ncedit
      
      call check( nf90_inq_varid(ncid, "qi", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.100) print *, " varid         = ", varid
+     if(debug_level.ge.200) print *, " varid         = ", varid
      call check( nf90_get_var(ncid, varid, var_in) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -145,7 +150,7 @@ program ncedit
      
      call check( nf90_inq_varid(ncid, "qs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.100) print *, " varid         = ", varid
+     if(debug_level.ge.200) print *, " varid         = ", varid
      call check( nf90_get_var(ncid, varid, var_in) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -153,7 +158,7 @@ program ncedit
      
      call check( nf90_inq_varid(ncid, "qg", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.100) print *, " varid         = ", varid
+     if(debug_level.ge.200) print *, " varid         = ", varid
      call check( nf90_get_var(ncid, varid, var_in) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -163,7 +168,7 @@ program ncedit
      ! the others
      call check( nf90_inq_varid(ncid, varname, varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.100) print *, " varid         = ", varid
+     if(debug_level.ge.200) print *, " varid         = ", varid
      call check( nf90_get_var(ncid, varid, var_in) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -173,6 +178,7 @@ program ncedit
   ! close netcdf file
   call check( nf90_close(ncid) )
   if(debug_level.ge.100) print *, "Success: close the netcdf data"
+  if(debug_level.ge.100) print *, ""
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -183,6 +189,7 @@ program ncedit
      ! select one of the 2D array
      tmp(:,:) = var_in(:,:,zselect,tselect)
      print *, "under construction"
+     stop
 
   else if(flag.eq.2) then
      ! x-z array
@@ -193,13 +200,13 @@ program ncedit
      case default
         tmp(:,:) = var_in(:,yselect,:,tselect)
      end select
-     if(debug_level.ge.100) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
+     if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
      
      ! interpolate the stretched coordinate to constant dy coordinate
      do k = 1, ny, 1
         iy(k) = (k-1)*dy
      end do
-     if(debug_level.ge.100) print *, " iy(:)         = ", iy
+     if(debug_level.ge.200) print *, " iy(:)         = ", iy
      ! z coordinate points are manually selected as follows;
      do j = 1, ny, 1
         if (j.eq.1) then
@@ -232,7 +239,7 @@ program ncedit
            ipoint = ipoint + 1
         end if
         var_out(:,j) = tmp(:,ipoint)
-        if(debug_level.ge.100) print *, " var_out(",xselect,",",j,") = ", var_out(xselect,j)
+        if(debug_level.ge.200) print *, " var_out(",xselect,",",j,") = ", var_out(xselect,j)
         !ccccc interpolation is not work well... ccccc
         ! call nearest_search_1d( iy, y(j), ipoint)
         ! call interpo_search_1d( iy, y(j), ipoint)
@@ -253,18 +260,18 @@ program ncedit
      !ccccccccccccccccccccccccccccccccccccccccccccc
      
   else if (flag.eq.3) then
-
      ! t-x array
-     print *, "t-x array"
+     if(debug_level.ge.100) print *, "t-x array"
      iy(:) = time(:)
      do t = 1, tmax, 1
         do i = 1, imax, 1
            var_out(i,t) = var_in(i,yselect,t,zselect)
         end do
-        print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+        if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
      end do
 
   end if
+  if(debug_level.ge.100) print *, ""
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -311,7 +318,8 @@ program ncedit
   ! close the file
   call check( nf90_close(ncid) )
   if(debug_level.ge.100) print *, "Success: close the netcdf file"
-
+  if(debug_level.ge.100) print *, ""
+  if(debug_level.ge.100) print *, "All done."
 
 contains
 
