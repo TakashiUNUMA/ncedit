@@ -196,7 +196,13 @@ program ncedit
      ! select one of the 2D array
      select case (varname)
      case ('water')
-        print *, "It has already allocated"
+        print *, "The tmp array has already allocated"
+        if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
+        tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+     case ('qc','qr','qi','qs','qg')
+        tmp(:,:) = var_in(:,yselect,:,tselect)
+        if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
+        tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
      case default
         tmp(:,:) = var_in(:,yselect,:,tselect)
      end select
@@ -263,13 +269,24 @@ program ncedit
      ! t-x array
      if(debug_level.ge.100) print *, "t-x array"
      iy(:) = time(:)
-     do t = 1, tmax, 1
-        do i = 1, imax, 1
-           var_out(i,t) = var_in(i,yselect,t,zselect)
+     select case (varname)
+     case ('rain')
+        if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
+        do t = 1, tmax, 1
+           do i = 1, imax, 1
+              var_out(i,t) = var_in(i,yselect,t,zselect)
+              var_out(i,t) = var_out(i,t)*real(10.) ! unit: [cm] -> [mm]
+           end do
+           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
         end do
-        if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
-     end do
-
+     case default
+        do t = 1, tmax, 1
+           do i = 1, imax, 1
+              var_out(i,t) = var_in(i,yselect,t,zselect)
+           end do
+           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+        end do
+     end select
   end if
   if(debug_level.ge.100) print *, ""
 
