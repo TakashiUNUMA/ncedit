@@ -6,12 +6,16 @@ __多次元 NetCDF ファイルから GMT で描画用の 2次元 NetCDF をは�
 
 ## コンパイル
 NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB ver. 1.2.5 を事前にコンパイルしておいて下さい。
+
 上記のライブラリの準備は、[こちら](https://github.com/TakashiUNUMA/wrflib_instsh) を参照。
 
 
-Makefile を編集する。
+ライブラリの準備が整ったら、Makefile を編集します。
+
 Intel, PGI, GNU fortran コンパイラのどれかを選択します。
+
 使用するコンパイラは、コンパイル済みのライブラリで使用したコンパイラと一致している必要が有ります。
+
 
 編集が完了したら make します。
 ```
@@ -49,19 +53,19 @@ ncedit
 
 例えば、4 次元データを x-z の 2 次元に次元をおとして出力する場合は、以下のようにする。
 ```
- flag = 2
- tselect = 240 (計算開始から 240 ステップ目)
- yselect = 2   (y 軸の 2 grid 目)
- dy                 = 0.500        ! 元のデータが stretch なので、0.5 km の等格子間隔に直す
- ny                 = 41           ! その時の grid 数
+ flag    = 2      ( x-z 断面 )
+ tselect = 240    ( 計算開始から 240 ステップ目 )
+ yselect = 2      ( y 軸の 2 grid 目 )
+ dy      = 0.500  ( 元のデータが stretch だったので、0.5 km の等格子間隔に直すためのもの )
+ ny      = 41     ( その時の grid 数 )
 ```
 
 ncedit.f90 を編集しやすくしたことで、出来るだけ汎用性の高いものをつくろうとしているところです。
 
 
 # 謝辞
-[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。。
-開発者の辻野智紀氏に感謝申し上げます。
+[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
+開発者の 辻野 智紀 氏に感謝申し上げます。
 
 
 # その他
