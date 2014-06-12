@@ -11,13 +11,13 @@ program ncedit
   implicit none
 
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid, deflate_level
-  integer :: i, j, k, t, imax, jmax, kmax, tmax, ny, ipoint
+  integer :: i, j, k, t, l, imax, jmax, kmax, tmax, ny, ipoint
   integer :: flag, xselect, yselect, zselect, tselect
   integer, dimension(2) :: start, count, dimids, chunks
   integer, dimension(4) :: istart, icount
-  real :: dy
+  real :: dy, tmp0
   real, dimension(:),     allocatable :: x, y, iy, z, time
-  real, dimension(:,:),   allocatable :: var_out, tmp
+  real, dimension(:,:),   allocatable :: var_out, tmp, tmp1, tmp2, tmp3
   real, dimension(:,:,:,:), allocatable :: var_in
   character(len=20) :: varname
   character(len=42) :: input, output
@@ -64,7 +64,7 @@ program ncedit
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   allocate( x(imax), y(jmax), z(kmax), time(tmax), iy(ny) )
   allocate( var_out(imax,ny) )
-  var_out(:,:)    = nan
+  var_out(:,:) = nan
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Input 4D file
@@ -119,8 +119,11 @@ program ncedit
      allocate( var_in(imax,1,kmax,1) )
      istart = (/ 1, yselect, 1, tselect /)
      icount = (/ imax, 1, kmax, 1 /)
-     allocate( tmp(imax,kmax) )
+     allocate( tmp(imax,kmax),tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) )
      tmp(:,:) = nan
+     tmp1(:,:) = nan
+     tmp2(:,:) = nan
+     tmp3(:,:) = nan
   case (3)
      allocate( var_in(imax,1,tmax,1) )
      istart = (/ 1, yselect, 1, 1 /)
@@ -139,12 +142,12 @@ program ncedit
   case ('water')
      ! for all water (qc+qr+qi+qc+qg) on the microphysics processes
      tmp(:,:) = 0.
-     do i = 1, 5, 1
-        if(i.eq.1) varname = "qc"
-        if(i.eq.2) varname = "qr"
-        if(i.eq.3) varname = "qi"
-        if(i.eq.4) varname = "qs"
-        if(i.eq.5) varname = "qg"
+     do l = 1, 5, 1
+        if(l.eq.1) varname = "qc"
+        if(l.eq.2) varname = "qr"
+        if(l.eq.3) varname = "qi"
+        if(l.eq.4) varname = "qs"
+        if(l.eq.5) varname = "qg"
         if(debug_level.ge.100) print *, "varname = ",trim(varname)
         call check( nf90_inq_varid(ncid, varname, varid) )
         if(debug_level.ge.100) print *, " Success: inquire the varid"
@@ -156,7 +159,64 @@ program ncedit
         if(debug_level.ge.100) print *, " Success: get the var array"
         if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
 !        tmp(:,:) = tmp(:,:) + var_in(:,yselect,:,tselect)
-        tmp(:,:) = tmp(:,:) + var_in(:,1,:,1)
+        if (i.eq.1) then
+           do k = 1, kmax, 1
+           do i = 1, imax, 1
+              tmp(i,k) = var_in(i,1,k,1)
+           end do
+           end do
+        else
+           do k = 1, kmax, 1
+           do i = 1, imax, 1
+              tmp(i,k) = tmp(i,k) + var_in(i,1,k,1)
+           end do
+           end do
+        end if
+     end do
+
+  case ('thetae')
+     ! equivalent potential temperature [K]
+     ! read prs [Pa]
+     call check( nf90_inq_varid(ncid, "prs", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     ! read theta [K]
+     call check( nf90_inq_varid(ncid, "th", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp2(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     ! read qv [kg/kg]
+     call check( nf90_inq_varid(ncid, "qv", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp3(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp0 = thetaP_2_T( tmp2(i,k), tmp1(i,k) )
+        tmp(i,k) = thetae_Bolton( tmp0, tmp3(i,k), tmp1(i,k) )
+     end do
      end do
      
   case default
@@ -214,6 +274,8 @@ program ncedit
         tmp(:,:) = var_in(:,1,:,1)
         if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
         tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+     case ('thetae')
+        print *, "The tmp array has already allocated"
      case default
 !        tmp(:,:) = var_in(:,yselect,:,tselect)
         tmp(:,:) = var_in(:,1,:,1)
@@ -286,20 +348,20 @@ program ncedit
      case ('rain')
         if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
         do t = 1, tmax, 1
-           do i = 1, imax, 1
+        do i = 1, imax, 1
 !              var_out(i,t) = var_in(i,yselect,t,zselect)
-              var_out(i,t) = var_in(i,1,t,1)
-              var_out(i,t) = var_out(i,t)*real(10.) ! unit: [cm] -> [mm]
-           end do
-           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+           var_out(i,t) = var_in(i,1,t,1)
+           var_out(i,t) = var_out(i,t)*real(10.) ! unit: [cm] -> [mm]
+        end do
+        if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
         end do
      case default
         do t = 1, tmax, 1
-           do i = 1, imax, 1
+        do i = 1, imax, 1
 !              var_out(i,t) = var_in(i,yselect,t,zselect)
-              var_out(i,t) = var_in(i,1,t,1)
-           end do
-           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+           var_out(i,t) = var_in(i,1,t,1)
+        end do
+        if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
         end do
      end select
   end if
@@ -537,5 +599,122 @@ contains
     end do
     
   end subroutine interpo_search_1d
+
+
+  !ccccccccccccccccccccccccccccccccccccc
+  !----- STPK: thermo_function.f90 -----
+  !ccccccccccccccccccccccccccccccccccccc
+  real function thetae_Bolton(T,qv,P)
+    ! Bolton(1980) による手法を用いて相当温位を計算する.
+    ! この相当温位は偽断熱過程での相当温位である.
+    ! T_LCL を用いるので, そのための関数を使用する.
+    implicit none
+    real, intent(in) :: T  ! 温度 [K]
+    real, intent(in) :: qv  ! 混合比 [kg / kg]
+    real, intent(in) :: P  ! 全圧 [Pa]
+    real :: T_LCL, qvs
+    real, parameter :: a=0.2854, b=0.28, c=3376.0, d=0.81
+    real, parameter :: p0=1.0e5
+    
+    T_LCL=TqvP_2_TLCL(T,qv,P)
+    qvs=TP_2_qvs(T_LCL,P)
+    thetae_Bolton=T*((p0/P)**(a*(1.0-b*qvs))) *exp((c/T_LCL-2.54)*qvs*(1.0+d*qvs))
+    
+    return
+  end function thetae_Bolton
+  
+  real function TqvP_2_TLCL(T,qv,P)  !! 温度と混合比と全圧から T_LCL を計算する
+    ! 混合比から水蒸気圧を求め, そこから T_LCL を計算する
+    implicit none
+    real, intent(in) :: T  ! 温度 [K]
+    real, intent(in) :: qv  ! 混合比 [kg / kg]
+    real, intent(in) :: P  ! 全圧 [Pa]
+    real, parameter :: coe=2840.0, a=3.5, b=4.805, c=55.0
+    real :: e
+    
+    e=qvP_2_e(qv,P)
+    e=e*1.0e-2
+    if(e>0.0)then
+       TqvP_2_TLCL=coe/(a*log(T)-log(e)-b)+55.0
+    else
+       TqvP_2_TLCL=coe/(a*log(T)-b)+55.0  ! true ??
+    end if
+    
+    return
+  end function TqvP_2_TLCL
+  
+  real function qvP_2_e(qv,P)  ! 混合比と全圧から水蒸気圧を計算する
+    implicit none
+    real, intent(in) :: qv  ! 混合比 [kg / kg]
+    real, intent(in) :: P  ! 全圧 [Pa]
+    real :: eps
+    real, parameter :: Rd=287.0
+    real, parameter :: Rv=461.0    
+
+    eps=Rd/Rv
+    qvP_2_e=P*qv/(eps+qv)
+    
+    return
+  end function qvP_2_e
+  
+  real function TP_2_qvs(T,P)  ! 温度と全圧から飽和混合比を計算する
+    ! ここでは, es_Bolton を用いて飽和水蒸気圧を計算した後,
+    ! eP_2_qv を用いて混合比に変換することで飽和混合比を計算する.
+    implicit none
+    real, intent(in) :: T  ! 温度 [K]
+    real, intent(in) :: P  ! 大気の全圧 [Pa]
+    real :: eps
+    real :: es
+    real, parameter :: Rd=287.0
+    real, parameter :: Rv=461.0    
+    
+    eps=Rd/Rv
+    es=es_Bolton(T)
+    TP_2_qvs=eps*es/(P-es)
+    
+    return
+  end function TP_2_qvs
+  
+  real function es_Bolton(T)  ! Bolton(1980) の手法を用いて飽和水蒸気圧を計算する.
+    implicit none
+    real, intent(in) :: T  ! 大気の温度 [K]
+    real, parameter :: a=17.67, c=29.65
+    real, parameter :: e0=611.0
+    real, parameter :: t0=273.15
+    
+    es_Bolton=e0*exp(a*((T-t0)/(T-c)))
+    
+    return
+  end function es_Bolton
+  
+  real function eP_2_qv(e,P)  ! 水蒸気圧と全圧から混合比を計算する
+    implicit none
+    real, intent(in) :: e  ! 水蒸気圧 [Pa]
+    real, intent(in) :: P  ! 大気の全圧 [Pa]
+    real :: eps
+    real, parameter :: Rd=287.0
+    real, parameter :: Rv=461.0    
+        
+    eps=Rd/Rv
+    eP_2_qv=eps*e/(P-e)
+    
+    return
+  end function eP_2_qv
+
+  real function thetaP_2_T(theta,P)  ! 温位, 圧力から温度を計算する(乾燥大気として計算)
+    implicit none
+    real, intent(in) :: theta  ! 温位 [K]
+    real, intent(in) :: P  ! 湿潤大気の全圧 [Pa]
+    real, parameter :: Rd=287.0
+    real, parameter :: Cpd=1004.0
+    real, parameter :: p0=1.0e5
+    real :: kappa
+    
+    kappa=Rd/Cpd
+    
+    thetaP_2_T=theta*(P/p0)**kappa
+    
+    return
+  end function thetaP_2_T
   
 end program ncedit
