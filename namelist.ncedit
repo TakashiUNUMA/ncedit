@@ -1,8 +1,7 @@
 &param
  imax               = 256
  jmax		    = 3
-! kmax		    = 64    ! x-z
- kmax		    = 1     ! x-t
+ kmax		    = 64
  tmax		    = 361
 ! varname	    = "water"
 ! varname	    = "buoyancy"
@@ -28,7 +27,7 @@
  flag		    = 3     ! x-t
 ! ny		    = 41    ! x-z
  ny		    = 361   ! x-t
- dy	            = 0.500 ! keep it
+ dy	            = 0.500 ! please keep it
  deflate_level      = 2
 ! debug_level        = 100
  debug_level        = 200
