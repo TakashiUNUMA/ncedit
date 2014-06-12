@@ -268,7 +268,8 @@ program ncedit
   else if (flag.eq.3) then
      ! t-x array
      if(debug_level.ge.100) print *, "t-x array"
-     iy(:) = time(:)
+     iy(:) = time(:)/real(60.)
+!     iy(:) = time(:)
      select case (varname)
      case ('rain')
         if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
