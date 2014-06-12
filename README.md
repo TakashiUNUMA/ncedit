@@ -56,4 +56,11 @@ ncedit
 
 ncedit.f90 を編集しやすくしたことで、出来るだけ汎用性の高いものをつくろうとしているところです。
 
+
+# 謝辞
+[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。。
+開発者の辻野智紀氏に感謝申し上げます。
+
+
+# その他
 何か質問・提案等ございましたら、 kijima.m.u (at) gmail.com へどうぞ。
