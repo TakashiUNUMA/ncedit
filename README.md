@@ -1,7 +1,7 @@
 # ncedit
 
 
--多次元 NetCDF ファイルから GMT で描画用の 2次元 NetCDF をはき出すプログラム-
+__多次元 NetCDF ファイルから GMT で描画用の 2次元 NetCDF をはき出すプログラム__
 
 
 ## コンパイル
