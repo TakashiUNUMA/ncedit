@@ -9,23 +9,38 @@ if test $# -lt 1 ; then
     echo "USAGE: $(basename $0) [infile]"
     exit
 fi
-#infile=output.nc4
 infile=$1
 
+for infile in $* ; do
+
+echo ${infile}
 
 title="Qc+Qr+Qi+Qs+Qg"
+unit="[g/kg]"
+VARMIN=0.5
+VARMAX=4.0
+VARINT=0.5
+BINT=a1f0.5
+
+#title="VERTICAL VELOCITY"
+#unit="[m/s]"
+#VARMIN=-5.0
+#VARMAX=5.0
+#VARINT=1.0
+#VARTYPE="polar"
+#BINT=a2f1
+
+
 xlabel="Distance [km]"
 ylabel="Height [km]"
-unit="[g/kg]"
 
 XINT=a10f5
 YINT=a5f1
-RANGE=-20/30/0/15
-PRJ=x0.2
-BINT=a1f0.5
+RANGE=-50/50/0/15
+PRJ=x0.1/0.2
 
 wind=1
-VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I2/1"
+VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I4/1"
 VECTORPOS=25
 
 #------------------------------------------
@@ -58,18 +73,17 @@ psfile=${infile%.nc4}.ps
 # psxy
 CPALET=cpalet.cpt
 #grd2cpt ${infile} > ${CPALET}
-unucpt ${infile%.nc4} 0.5 4.0 0.5
+unucpt ${infile%.nc4} ${VARMIN} ${VARMAX} ${VARINT} ${VARTYPE}
 grdimage ${infile} -J${PRJ} -R${RANGE} -C${CPALET} -X3.0 -Y3.0 ${gmtsta} > ${psfile}
-#grdcontour ${infile} -J${PRJ} -R${RANGE} -C${CPALET} -X1.2 -Y1.2 ${gmtsta} > ${psfile}
 
 # psscale
 gmtset ANOT_FONT_SIZE 8p
 gmtset TICK_LENGTH -0.1c
-#psscale -D8.25/-0.6/3.0/0.15h -B${BINT}/:"${unit}": -C${CPALET} -N ${gmtcon} >> ${psfile}
 psscale -D1.35/-0.6/2.75/0.2h -B${BINT}/:"${unit}": -C${CPALET} -N ${gmtcon} >> ${psfile}
 
 if test ${wind} -eq 1 ; then
-    grdvector uinterp.nc4 winterp.nc4 -J -R ${VECTOROPT} ${gmtcon} >> ${psfile}
+    suffix=$(echo ${infile} | cut -d "_" -f 2)
+    grdvector uinterp_${suffix} winterp_${suffix} -J -R ${VECTOROPT} ${gmtcon} >> ${psfile}
     psxy -R -J -Sv0.02/0.15/0.1 -L -G0 -W1 -N ${gmtcon} << EOF >> ${psfile}
   ${VECTORPOS} -3.5 0 0.4
 EOF
@@ -80,7 +94,7 @@ fi
 
 # psbasemap
 gmtset TICK_LENGTH -0.15c
-psbasemap -J -R -B${XINT}:"${xlabel}":/${YINT}:"${ylabel}":SWne:."${title}": ${gmtcon} >> ${psfile}
+psbasemap -J -R -B${XINT}:"${xlabel}":/${YINT}:"${ylabel}":SWne:."${title} FT = ${suffix%.nc4}": ${gmtcon} >> ${psfile}
 
 # labels (pstext)
 # x     y   size angle font place comment
@@ -99,3 +113,5 @@ ps2raster -Tg -A ${psfile}
 ps2raster -Tf -A ${psfile}
 
 rm -f .gmt*
+
+done
