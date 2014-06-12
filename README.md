@@ -27,7 +27,7 @@ ncedit
 
 
 ## 使用方法
-基本的には、namelist.ncedit を編集しながら使用する。
+基本的には、namelist.ncedit を編集し、使用する (あまり ncedit.f90 本体を弄らないようにするため)。
 
 ```
 &param
@@ -59,12 +59,23 @@ ncedit
  ny      = 41     ( その時の grid 数 )
 ```
 
-ncedit.f90 を編集しやすくしたことで、出来るだけ汎用性の高いものをつくろうとしているところです。
+また、ncedit.f90 は、
+```
+多次元 -> 2 次元の次元変換
+出力時の単位変換
+元データに無い変数の計算
+```
+等のために出来るだけ単純化しているつもりです。
+どんどん追加していきますが、単純な構造を保ちつつ複雑にならないように設計していくつもりです。
 
 
 # 謝辞
 [数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
 開発者の 辻野 智紀 氏に感謝申し上げます。
+
+
+# 参考文献・URL
+http://www.u.tsukuba.ac.jp/~hayasaki.masamits.fw/Linux_tips/GMT_img_script/grdvector.gmt
 
 
 # その他
