@@ -22,7 +22,8 @@ program ncedit
   character(len=42) :: input, output
   integer :: debug_level
 
-  real :: nan = (/ Z'7fffffff' /)
+!  real :: nan = (/ Z'7fffffff' /)
+  real :: nan = -999.
 
   
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -497,4 +498,4 @@ contains
     
   end subroutine interpo_search_1d
   
-end program nc42bin
+end program ncedit
