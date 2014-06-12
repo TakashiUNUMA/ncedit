@@ -5,11 +5,13 @@ __多次元 NetCDF ファイルから GMT で描画用の 2次元 NetCDF をは�
 
 
 ## コンパイル
-NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB 1.2.5 を事前にコンパイルしておいて下さい。
+NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB ver. 1.2.5 を事前にコンパイルしておいて下さい。
 上記のライブラリの準備は、[こちら](https://github.com/TakashiUNUMA/wrflib_instsh) を参照。
+
 
 Makefile を編集する。
 Intel, PGI, GNU fortran コンパイラのどれかを選択します。
+使用するコンパイラは、コンパイル済みのライブラリで使用したコンパイラと一致している必要が有ります。
 
 編集が完了したら make します。
 ```
