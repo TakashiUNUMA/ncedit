@@ -75,11 +75,11 @@ ncedit
 
 
 # 参考文献・URL
-http://www.u.tsukuba.ac.jp/~hayasaki.masamits.fw/Linux_tips/GMT_img_script/grdvector.gmt
+- http://www.u.tsukuba.ac.jp/~hayasaki.masamits.fw/Linux_tips/GMT_img_script/grdvector.gmt
+- http://www.unidata.ucar.edu/software/netcdf/docs/netcdf-f90/NF90_005fGET_005fVAR.html#NF90_005fGET_005fVAR
 
 
 # TODO
-- 多次元データを読む際に、出力する断面のみを読んでメモリ節約
 - x-y 断面追記
 - 時刻処理
 
