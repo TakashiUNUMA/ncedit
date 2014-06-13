@@ -1,35 +1,44 @@
 #
 # Makefile for ncedit.f90
 # original makefile coded by Takashi Unuma, Kyoto Univ.
-# Last modified: 2014/06/12
+# Last modified: 2014/06/13
 #
 
 #-------------------------------------------------
 # Make for Intel Compiler on Linux x86_64 system
-#FC      = ifort
+FC      = ifort
 #NETCDF  = /home/unuma/usr/local/netcdf-4.1.3
 #ZLIB    = /home/unuma/usr/local/zlib-1.2.5
 #HDF5    = /home/unuma/usr/local/hdf5-1.8.7
-#FFLAGS  = -I$(NETCDF)/include -FR -O3 -xSSE4.2 -assume byterecl -i-dynamic -fno-alias -unroll0 -ipo
-#FFLAGS  = -I$(NETCDF)/include -FR -g -O0 -assume byterecl -i-dynamic -warn all -check all
+NETCDF  = /LARGE0/gr10053/b31894/lib/netcdf-4.1.3-intel
+ZLIB    = /LARGE0/gr10053/b31894/lib/hdf5-1.8.7-intel
+HDF5    = /LARGE0/gr10053/b31894/lib/zlib-1.2.5-intel
+#FFLAGS  = -I$(NETCDF)/include -FR -O3 -xHost -assume byterecl -i-dynamic -fno-alias -unroll0 -ipo
+FFLAGS  = -I$(NETCDF)/include -FR -g -O0 -assume byterecl -i-dynamic -warn all -check all
 # -----
 # Make for GNU Compiler on Linux x86_64 system
-FC      = gfortran
+#FC      = gfortran
 #NETCDF  = /home/unuma/usr/local/netcdf-4.1.3-gnu
 #ZLIB    = /home/unuma/usr/local/zlib-1.2.5-gnu
 #HDF5    = /home/unuma/usr/local/hdf5-1.8.7-gnu
 #NETCDF  = /usr
 #ZLIB    = /usr
 #HDF5    = /usr
+#NETCDF  = /LARGE0/gr10053/b31894/lib/netcdf-4.1.3-gnu
+#ZLIB    = /LARGE0/gr10053/b31894/lib/hdf5-1.8.12-gnu
+#HDF5    = /LARGE0/gr10053/b31894/lib/zlib-1.2.8-gnu
 #FFLAGS	= -I$(NETCDF)/include -frecord-marker=4 -ffree-form -O3 -ftree-vectorize -funroll-loops -fno-range-check
 #FFLAGS	= -I$(NETCDF)/include -frecord-marker=4 -ffree-form -O -Wall -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbounds-check -fno-range-check
 # -----
 # Make for PGI Compiler on Linux x86_64 system
-FC      = pgfortran
-NETCDF  = /usr/local/netcdf-4.1.3-pgi
-ZLIB    = /usr/local/zlib-1.2.5-pgi
-HDF5    = /usr/local/hdf5-1.8.7-pgi
-FFLAGS	= -I$(NETCDF)/include -pc 64 -Kieee -O0 -Ktrap=fp -Minform=inform -Mbounds -Mlre=noassoc
+#FC      = pgfortran
+#NETCDF  = /usr/local/netcdf-4.1.3-pgi
+#ZLIB    = /usr/local/zlib-1.2.5-pgi
+#HDF5    = /usr/local/hdf5-1.8.7-pgi
+#NETCDF  = /LARGE0/gr10053/b31894/lib/netcdf-4.1.3-pgi
+#ZLIB    = /LARGE0/gr10053/b31894/lib/hdf5-1.8.12-pgi
+#HDF5    = /LARGE0/gr10053/b31894/lib/zlib-1.2.8-pgi
+#FFLAGS	= -I$(NETCDF)/include -pc 64 -Kieee -O0 -Ktrap=fp -Minform=inform -Mbounds -Mlre=noassoc
 #-------------------------------------------------
 
 

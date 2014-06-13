@@ -11,24 +11,27 @@ program ncedit
   implicit none
 
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid, deflate_level
-  integer :: i, j, k, t, l, imax, jmax, kmax, tmax, ny, ipoint
+  integer :: imax, jmax, kmax, tmax, ny
   integer :: flag, xselect, yselect, zselect, tselect
   integer, dimension(2) :: start, count, dimids, chunks
   integer, dimension(4) :: istart, icount
   real :: dy
-  real, dimension(:),     allocatable :: x, y, iy, z, time
-  real, dimension(:,:),   allocatable :: var_out
+  real, dimension(:),       allocatable :: x, y, iy, z, time
+  real, dimension(:,:),     allocatable :: var_out
   real, dimension(:,:,:,:), allocatable :: var_in
   character(len=20) :: varname
   character(len=42) :: input, output
   integer :: debug_level
 
   ! local variables
+  integer :: i, j, k, t, ipoint
   real :: tmp0
   real, dimension(:,:),   allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
-  real :: nan = (/ Z'7fffffff' /)
+
+  ! undefined value
+!  real :: nan = (/ Z'7fffffff' /) ! not work with gfortran
 !  real :: nan = -999.
-!  real :: nan = -2147483648.
+  real :: nan = -2147483648.
 
   
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -526,7 +529,7 @@ contains
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! subroutine of nearest_search_1d on STPK
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
-  subroutine nearest_search_1d( x, point, i, hx, hp )
+  subroutine nearest_search_1d( x, point, i )
     ! 1 次元最近傍探索ルーチン
     ! interpo_search_1d から値を求め, その値と +1 した値の距離を比較して
     ! 距離の短い方を選択する.
@@ -534,8 +537,6 @@ contains
     real, intent(in) :: x(:)  ! 漸増配列
     real, intent(in) :: point  ! この点
     integer, intent(inout) :: i  ! point の最近傍地点の要素番号
-    real, intent(in), optional :: hx(size(x))  ! x 座標のスケール因子
-    real, intent(in), optional :: hp  ! point でのスケール因子 !! まだ用意しただけ
     real :: tmp1, tmp2
     integer :: j, nx
     
