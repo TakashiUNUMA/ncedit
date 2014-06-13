@@ -1,7 +1,7 @@
 !
 ! Program of ncedit.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/12
+! Last modified: 2014/06/13
 !
 
 program ncedit
@@ -15,17 +15,20 @@ program ncedit
   integer :: flag, xselect, yselect, zselect, tselect
   integer, dimension(2) :: start, count, dimids, chunks
   integer, dimension(4) :: istart, icount
-  real :: dy, tmp0
+  real :: dy
   real, dimension(:),     allocatable :: x, y, iy, z, time
-  real, dimension(:,:),   allocatable :: var_out, tmp, tmp1, tmp2, tmp3
+  real, dimension(:,:),   allocatable :: var_out
   real, dimension(:,:,:,:), allocatable :: var_in
   character(len=20) :: varname
   character(len=42) :: input, output
   integer :: debug_level
 
-!  real :: nan = (/ Z'7fffffff' /)
+  ! local variables
+  real :: tmp0
+  real, dimension(:,:),   allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
+  real :: nan = (/ Z'7fffffff' /)
 !  real :: nan = -999.
-  real :: nan = -2147483648.
+!  real :: nan = -2147483648.
 
   
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -58,6 +61,7 @@ program ncedit
   if(debug_level.ge.100) print '(a18,i6)',  " debug_level   = ", debug_level
   if(debug_level.ge.100) print '(a30)',     "----- values on namelist -----"
   if(debug_level.ge.100) print *, ""
+
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Initialization
@@ -108,27 +112,32 @@ program ncedit
   if(debug_level.ge.100) print *, ""
 
 
+  ! allocate arrays
   select case (flag)
   case (1)
      allocate( var_in(imax,jmax,1,1) )
      istart = (/ 1, 1, zselect, tselect /)
      icount = (/ imax, jmax, 1, 1 /)
-     allocate( tmp(imax,jmax) )
+     allocate( tmp(imax,jmax) ) ! allocate x-y array
      tmp(:,:) = nan
   case (2)
      allocate( var_in(imax,1,kmax,1) )
      istart = (/ 1, yselect, 1, tselect /)
      icount = (/ imax, 1, kmax, 1 /)
-     allocate( tmp(imax,kmax),tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) )
+     allocate( tmp(imax,kmax) ) ! allocate x-z arrays
+     allocate( tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) ) ! allocate x-z arrays
+     allocate( tmp4(imax,kmax),tmp5(imax,kmax) ) ! allocate x-z arrays
      tmp(:,:) = nan
      tmp1(:,:) = nan
      tmp2(:,:) = nan
      tmp3(:,:) = nan
+     tmp4(:,:) = nan
+     tmp5(:,:) = nan
   case (3)
      allocate( var_in(imax,1,tmax,1) )
      istart = (/ 1, yselect, 1, 1 /)
      icount = (/ imax, 1, tmax, 1 /)
-     allocate( tmp(imax,tmax) )
+     allocate( tmp(imax,tmax) ) ! allocate x-t array
      tmp(:,:) = nan
 !  case default
 !     allocate( var_in(imax,jmax,kmax,tmax) )
@@ -141,42 +150,76 @@ program ncedit
   select case (varname)
   case ('water')
      ! for all water (qc+qr+qi+qc+qg) on the microphysics processes
-     tmp(:,:) = 0.
-     do l = 1, 5, 1
-        if(l.eq.1) varname = "qc"
-        if(l.eq.2) varname = "qr"
-        if(l.eq.3) varname = "qi"
-        if(l.eq.4) varname = "qs"
-        if(l.eq.5) varname = "qg"
-        if(debug_level.ge.100) print *, "varname = ",trim(varname)
-        call check( nf90_inq_varid(ncid, varname, varid) )
-        if(debug_level.ge.100) print *, " Success: inquire the varid"
-        if(debug_level.ge.200) print *, "  varid         = ", varid
-!        call check( nf90_get_var(ncid, varid, var_in) )
-!        call check( nf90_get_var(ncid, varid, var_in(:,yselect,:,tselect), &
-        call check( nf90_get_var(ncid, varid, var_in, &
-                                 start = istart, count = icount ) )
-        if(debug_level.ge.100) print *, " Success: get the var array"
-        if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
-!        tmp(:,:) = tmp(:,:) + var_in(:,yselect,:,tselect)
-        if (i.eq.1) then
-           do k = 1, kmax, 1
-           do i = 1, imax, 1
-              tmp(i,k) = var_in(i,1,k,1)
-           end do
-           end do
-        else
-           do k = 1, kmax, 1
-           do i = 1, imax, 1
-              tmp(i,k) = tmp(i,k) + var_in(i,1,k,1)
-           end do
-           end do
-        end if
+     ! --- read qc
+     call check( nf90_inq_varid(ncid, "qc", varid) )
+     if(debug_level.ge.100) print *, " Success: inquire the varid"
+     if(debug_level.ge.200) print *, "  varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qr
+     call check( nf90_inq_varid(ncid, "qr", varid) )
+     if(debug_level.ge.100) print *, " Success: inquire the varid"
+     if(debug_level.ge.200) print *, "  varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp2(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qi
+     call check( nf90_inq_varid(ncid, "qi", varid) )
+     if(debug_level.ge.100) print *, " Success: inquire the varid"
+     if(debug_level.ge.200) print *, "  varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp3(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qs
+     call check( nf90_inq_varid(ncid, "qs", varid) )
+     if(debug_level.ge.100) print *, " Success: inquire the varid"
+     if(debug_level.ge.200) print *, "  varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp4(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qg
+     call check( nf90_inq_varid(ncid, "qg", varid) )
+     if(debug_level.ge.100) print *, " Success: inquire the varid"
+     if(debug_level.ge.200) print *, "  varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp5(i,k) = var_in(i,1,k,1)
+     end do
+     end do
+     ! --- calculate water = qc + qr + qi + qs + qg [kg/kg]
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp(i,k) = tmp1(i,k) + tmp2(i,k) + tmp3(i,k) + tmp4(i,k) + tmp5(i,k)
+     end do
      end do
 
   case ('thetae')
      ! equivalent potential temperature [K]
-     ! read prs [Pa]
+     ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
@@ -188,7 +231,7 @@ program ncedit
         tmp1(i,k) = var_in(i,1,k,1)
      end do
      end do
-     ! read theta [K]
+     ! --- read theta [K]
      call check( nf90_inq_varid(ncid, "th", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
@@ -200,7 +243,7 @@ program ncedit
         tmp2(i,k) = var_in(i,1,k,1)
      end do
      end do
-     ! read qv [kg/kg]
+     ! --- read qv [kg/kg]
      call check( nf90_inq_varid(ncid, "qv", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
@@ -224,22 +267,7 @@ program ncedit
      call check( nf90_inq_varid(ncid, varname, varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
-     select case (flag)
-     case (1) ! x-y
-!        call check( nf90_get_var(ncid, varid, var_in(:,:,zselect,tselect), &
-        call check( nf90_get_var(ncid, varid, var_in, &
-                                 start = istart, count = icount ) )
-     case (2) ! x-z
-!        call check( nf90_get_var(ncid, varid, var_in(:,yselect,:,tselect), &
-        call check( nf90_get_var(ncid, varid, var_in, &
-                                 start = istart, count = icount ) )
-     case (3) ! x-t
-!        call check( nf90_get_var(ncid, varid, var_in(:,yselect,:,1), &
-        call check( nf90_get_var(ncid, varid, var_in, &
-                                 start = istart, count = icount ) )
-     case default
-     call check( nf90_get_var(ncid, varid, var_in) )
-     end select
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
 
@@ -270,7 +298,6 @@ program ncedit
         if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
         tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
      case ('qc','qr','qi','qs','qg')
-!        tmp(:,:) = var_in(:,yselect,:,tselect)
         tmp(:,:) = var_in(:,1,:,1)
         if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
         tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
