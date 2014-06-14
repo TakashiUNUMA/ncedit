@@ -77,7 +77,10 @@ gmtset FRAME_PEN                  0.50p
 gmtset GRID_PEN                   0.20p
 gmtset TICK_PEN                   0.50p
 gmtset MEASURE_UNIT                  cm
-gmtset PAPER_MEDIA                   a4
+#gmtset PAPER_MEDIA                   a4
+gmtset PAPER_MEDIA                  a4+
+#gmtset PAPER_MEDIA              letter+
+#gmtset PAPER_MEDIA              ledger+
 gmtset VECTOR_SHAPE                   2
 
 
@@ -87,7 +90,7 @@ gmtcon="-P -K -O"
 gmtend="-P -O"
 
 # Specify output file
-psfile=${infile%.nc4}.ps
+psfile=${infile%.nc4}.eps
 
 # psxy
 CPALET=cpalet.cpt
@@ -97,6 +100,7 @@ else
     unucpt ${infile%.nc4} ${VARMIN} ${VARMAX} ${VARINT} ${VARTYPE}
 fi
 grdimage ${infile} -J${PRJ} -R${RANGE} -C${CPALET} -X3.0 -Y3.0 ${gmtsta} > ${psfile}
+#grdimage ${infile} -J${PRJ} -R${RANGE} -C${CPALET} -X1.5 -Y1.5 ${gmtsta} > ${psfile}
 
 # psscale
 gmtset ANOT_FONT_SIZE 8p
@@ -119,21 +123,23 @@ cat << EOF | pstext -R1/10/1/10 -Jx1.0 -N ${gmtend} >> ${psfile}
 EOF
 
 # convert from ps to png
-#ps2raster -Tg -A ${psfile}
+ps2raster -Tg -A ${psfile}
 
 # convert from ps to pdf
-#ps2raster -Tf -A ${psfile}
+ps2raster -Tf -A ${psfile}
 
 rm -f .gmt*
 rm -f cpalet.cpt
 
 done
 
-echo "ps2png..."
-#ls *.ps | parallel -j +0 ps2raster -Tg -A {}
-time ls *.ps | parallel -j 6 ps2raster -Tg -A {}
-echo "ps2pdf..."
-#ls *.ps | parallel -j +0 ps2raster -Tf -A {}
-time ls *.ps | parallel -j 6 ps2raster -Tf -A {}
+#echo "ps2png..."
+#time ls *.eps | parallel -j +0 ps2raster -Tg -A {}
+#time ls *.eps | parallel -j 6 ps2raster -Tg -A {}
+#echo "ps2pdf..."
+#time ls *.eps | parallel -j +0 ps2raster -Tf -A {}
+#time ls *.eps | parallel -j 6 ps2raster -Tf -A {}
+
 echo "done."
-rm -f *.ps
+
+#rm -f *.eps

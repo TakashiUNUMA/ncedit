@@ -86,13 +86,6 @@ program ncedit_stats
   end do
 
   select case (varname)
-  case ('rain')
-     if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
-     do t = 1, tmax, 1
-        var_in(t) = var_in(t)*real(10.) ! unit: [cm] -> [mm]
-        if(debug_level.ge.200) print *, "t,time,var_in = ",t,time(t),var_in(t)
-     end do
-
   case ('qcbot','qctop')
      if(debug_level.ge.100) print *, " unit: [m] -> [km]"
      do t = 1, tmax, 1
@@ -107,11 +100,61 @@ program ncedit_stats
         if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
      end do
 
-  ! case default
-  !    do t = 1, tmax, 1
-  !       var_out(i,t) = var_in(i,1,t,1)
-  !    end do
-  !    if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+  case ('tmois')
+     if(debug_level.ge.100) print *, " unit: [kg] -> 10^9 [kg]"
+     do t = 1, tmax, 1
+        var_in(t) = var_in(t)/real(1.0d9) ! unit: [kg] -> 10^9 [kg]
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+
+  case ('tmass')
+     if(debug_level.ge.100) print *, " unit: [kg] -> 10^11 [kg]"
+     do t = 1, tmax, 1
+        var_in(t) = var_in(t)/real(1.0d11) ! unit: [kg] -> 10^11 [kg]
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+
+  case ('et')
+     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
+     do t = 1, tmax, 1
+        var_in(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+
+  case ('ek')
+     if(debug_level.ge.100) print *, " unit: [kg] -> 10^12 [kg]"
+     do t = 1, tmax, 1
+        var_in(t) = var_in(t)/real(1.0d12) ! unit: [kg] -> 10^12 [kg]
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+
+  case ('ei')
+     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
+     do t = 1, tmax, 1
+        var_in(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+
+  case ('ep')
+     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
+     do t = 1, tmax, 1
+        var_in(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+
+  case ('le')
+     if(debug_level.ge.100) print *, " unit: [kg] -> 10^13 [kg]"
+     do t = 1, tmax, 1
+        var_in(t) = var_in(t)/real(1.0d13) ! unit: [kg] -> 10^13 [kg]
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+
+  case default
+     do t = 1, tmax, 1
+        var_in(t) = real(var_in(t))
+        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     end do
+     
   end select
   if(debug_level.ge.100) print *, ""
 
@@ -137,8 +180,8 @@ program ncedit_stats
   if(debug_level.ge.100) print *, "All done."
 
   ! formats
-111 format(f8.3,f25.8)
-222 format(a17,i5,f8.3,f25.8)
+111 format(f8.3,f18.8)
+222 format(a17,i5,f8.3,f18.8)
 
 contains
   
