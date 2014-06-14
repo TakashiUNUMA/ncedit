@@ -65,21 +65,19 @@ OUTPUTINC = -I$(NETCDF)/include -I$(HDF5)/include -I$(ZLIB)/include
 OUTPUTLIB = -L$(NETCDF)/lib -L$(HDF5)/lib -L$(ZLIB)/lib
 LINKOPTS  = -lnetcdf -lnetcdff -lhdf5_hl -lhdf5 -lz -lm -lcurl
 
-OBJECT  = ncedit.o
-
 .SUFFIXES:
 .SUFFIXES: .f90 .o
 
-all: 	ncedit
+all: 	ncedit ncedit_stats
 
-ncedit: $(OBJECT)
-	$(FC) $(OBJECT) $(FFLAGS) $(OUTPUTINC) $(OUTPUTLIB) $(LINKOPTS) -o $@
+ncedit: ncedit.f90
+	$(FC) ncedit.f90 $(FFLAGS) $(OUTPUTINC) $(OUTPUTLIB) $(LINKOPTS) -o $@
 
-.f90.o:
-	$(FC) $(FFLAGS) $(OUTPUTINC) -c -o $@ $*.f90
+ncedit_stats: ncedit_stats.f90
+	$(FC) ncedit_stats.f90 $(FFLAGS) $(OUTPUTINC) $(OUTPUTLIB) $(LINKOPTS) -o $@
 
 clean:
-	rm -rf *.o *genmod.* *.f90~ Makefile~ ncedit
+	rm -rf *.o *genmod.* *.f90~ Makefile~ ncedit ncedit_stats
 
 ############################################################ end
 .NOEXPORT:

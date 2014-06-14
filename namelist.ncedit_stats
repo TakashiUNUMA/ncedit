@@ -1,0 +1,16 @@
+&param
+ tmax		    = 361
+! varname	    = "wmax"
+! varname	    = "qctop"
+! varname	    = "qcbot"
+! varname	    = "themax"
+! varname	    = "themin"
+! varname	    = "rhmax"
+ varname	    = "rhmin"
+ input		    = "cm1out_stats.nc"
+ output		    = "test.txt"
+! output		    = "wmax.txt"
+! output		    = "qctop.txt"
+! output		    = "qcbot.txt"
+ debug_level        = 200
+/
