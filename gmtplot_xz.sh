@@ -9,7 +9,7 @@ if test $# -lt 1 ; then
     echo "USAGE: $(basename $0) [infile]"
     exit
 fi
-infile=$1
+#infile=$1
 
 for infile in $* ; do
 
@@ -159,14 +159,15 @@ EOF
 
 #rm -f ${psfile}
 rm -f .gmt*
+rm -f cpalet.cpt
 
 done
 
 echo "ps2png..."
 #ls *.ps | parallel -j +0 ps2raster -Tg -A {}
-ls *.ps | parallel -j 6 ps2raster -Tg -A {}
+time ls *.ps | parallel -j 6 ps2raster -Tg -A {}
 echo "ps2pdf..."
 #ls *.ps | parallel -j +0 ps2raster -Tf -A {}
-ls *.ps | parallel -j 6 ps2raster -Tf -A {}
+time ls *.ps | parallel -j 6 ps2raster -Tf -A {}
 echo "done."
 rm -f *.ps
