@@ -83,27 +83,27 @@ elif test  ${prefix} = "tmois" ; then
     title="TOTAL MOISTURE"
     ylabel="${prefix} * 10@+9@+ [kg]"
     VARMIN=42.0
-    VARMAX=44.4
+    VARMAX=45.0
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a0.2f0.1
-    PRJ=x1.0/2.15
+    YINT=a1.0f0.5
+    PRJ=x1.0/1.0
 
 elif test  ${prefix} = "tmass" ; then
     title="TOTAL DRY AIR MASS"
     ylabel="${prefix} * 10@+11@+ [kg]"
-    VARMIN=73.58
-    VARMAX=73.65
+    VARMIN=73.54
+    VARMAX=73.66
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a0.02f0.01
-    PRJ=x1.0/42.5
+    YINT=a0.05f0.01
+    PRJ=x1.0/25
 
 elif test  ${prefix} = "et" ; then
     title="TOTAL ENERGY"
     ylabel="${prefix} * 10@+16@+ [kg]"
-    VARMIN=189.16
+    VARMIN=189.17
     VARMAX=189.37
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a0.02f0.01
+    YINT=a0.1f0.01
     PRJ=x1.0/30
 
 elif test  ${prefix} = "ek" ; then
