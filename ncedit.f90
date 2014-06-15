@@ -1,7 +1,7 @@
 !
 ! Program of ncedit.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/13
+! Last modified: 2014/06/15
 !
 
 program ncedit
@@ -10,13 +10,12 @@ program ncedit
   
   implicit none
 
-  integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid, deflate_level
-  integer :: imax, jmax, kmax, tmax, ny
+  integer :: imax, jmax, kmax, tmax, deflate_level
   integer :: flag, xselect, yselect, zselect, tselect
   integer, dimension(2) :: start, count, dimids, chunks
   integer, dimension(4) :: istart, icount
   real :: dy
-  real, dimension(:),       allocatable :: x, y, iy, z, time
+  real, dimension(:),       allocatable :: x, y, iy, z, time_in
   real, dimension(:,:),     allocatable :: var_out
   real, dimension(:,:,:,:), allocatable :: var_in
   character(len=20) :: varname
@@ -24,7 +23,8 @@ program ncedit
   integer :: debug_level
 
   ! local variables
-  integer :: i, j, k, t, ipoint
+  integer :: i, j, k, t, ipoint, ny
+  integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
   real :: tmp0
   real, dimension(:,:),   allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
 
@@ -69,7 +69,7 @@ program ncedit
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Initialization
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
-  allocate( x(imax), y(jmax), z(kmax), time(tmax), iy(ny) )
+  allocate( x(imax), y(jmax), z(kmax), time_in(tmax), iy(ny) )
   allocate( var_out(imax,ny) )
   var_out(:,:) = nan
 
@@ -109,9 +109,9 @@ program ncedit
   call check( nf90_inq_varid(ncid, 'time', tdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the tdimid"
   if(debug_level.ge.200) print *, " tdimid        = ", tdimid
-  call check( nf90_get_var(ncid, tdimid, time) )
+  call check( nf90_get_var(ncid, tdimid, time_in) )
   if(debug_level.ge.100) print *, "Success: get the time coordinate"
-  if(debug_level.ge.200) print *, " time(:)       = ", time
+  if(debug_level.ge.200) print *, " time_in(:)    = ", time_in
   if(debug_level.ge.100) print *, ""
 
 
@@ -307,7 +307,6 @@ program ncedit
      case ('thetae')
         print *, "The tmp array has already allocated"
      case default
-!        tmp(:,:) = var_in(:,yselect,:,tselect)
         tmp(:,:) = var_in(:,1,:,1)
      end select
      if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
@@ -372,7 +371,7 @@ program ncedit
   else if (flag.eq.3) then
      ! x-t array
      if(debug_level.ge.100) print *, "x-t array"
-     iy(:) = time(:)/real(60.) ! uint: [second] -> [hour]
+     iy(:) = real(time_in(:)/dble(60.)) ! uint: [minute] -> [hour]
 !     iy(:) = time(:) ! uint: [second]
      select case (varname)
      case ('rain')
@@ -388,7 +387,6 @@ program ncedit
      case default
         do t = 1, tmax, 1
         do i = 1, imax, 1
-!              var_out(i,t) = var_in(i,yselect,t,zselect)
            var_out(i,t) = var_in(i,1,t,1)
         end do
         if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
@@ -434,8 +432,8 @@ program ncedit
 
 
   ! write the pretend data
-  count = (/ imax, ny /)
   start = (/ 1, 1 /)
+  count = (/ imax, ny /)
   call check( nf90_put_var(ncid, varid, var_out, start = start, count = count) )
   if(debug_level.ge.100) print *, "Success: write the pretend data"
 

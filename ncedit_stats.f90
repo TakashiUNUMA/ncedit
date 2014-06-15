@@ -1,7 +1,7 @@
 !
 ! Program of ncedit_status.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/14
+! Last modified: 2014/06/15
 !
 
 program ncedit_stats
@@ -10,14 +10,15 @@ program ncedit_stats
   
   implicit none
 
-  integer :: ncid, varid, tdimid, tmax
-  real, dimension(:), allocatable :: time, var_in
+  integer :: tmax
+  real, dimension(:), allocatable :: time_in, var_in
+  real, dimension(:), allocatable :: time_out, var_out
   character(len=20) :: varname
   character(len=42) :: input, output
   integer :: debug_level
 
   ! local variables
-  integer :: t
+  integer :: t, ncid, varid, tdimid
 
   ! undefined value
   real :: nan = -999.
@@ -42,9 +43,12 @@ program ncedit_stats
   if(debug_level.ge.100) print *, ""
 
   ! allocate arrays
-  allocate( time(tmax), var_in(tmax) )
-  time(:)   = nan
-  var_in(:) = nan
+  allocate( time_in(tmax), var_in(tmax) )
+  allocate( time_out(tmax), var_out(tmax) )
+  time_in(:)  = nan
+  var_in(:)   = nan
+  time_out(:) = nan
+  var_out(:)  = nan
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Input 4D file
@@ -58,9 +62,9 @@ program ncedit_stats
   call check( nf90_inq_varid(ncid, 'time', tdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the tdimid"
   if(debug_level.ge.200) print *, " tdimid        = ", tdimid
-  call check( nf90_get_var(ncid, tdimid, time) )
+  call check( nf90_get_var(ncid, tdimid, time_in) )
   if(debug_level.ge.100) print *, "Success: get the time coordinate"
-  if(debug_level.ge.200) print *, " time(:)       = ", time
+  if(debug_level.ge.200) print *, " time(:)       = ", time_in
   if(debug_level.ge.100) print *, ""
   
   ! inquire and get var
@@ -70,7 +74,7 @@ program ncedit_stats
   if(debug_level.ge.200) print *, " varid         = ", varid
   call check( nf90_get_var(ncid, varid, var_in) )
   if(debug_level.ge.100) print *, "Success: get the var array"
-  if(debug_level.ge.100) print *, " var_in(:)     = ", var_in
+  if(debug_level.ge.200) print *, " var_in(:)     = ", var_in
 
   ! close netcdf file
   call check( nf90_close(ncid) )
@@ -79,80 +83,138 @@ program ncedit_stats
 
 
   ! x-t array
-  if(debug_level.ge.100) print *, "x-t array"
+  if(debug_level.ge.100) print *, "output time as time_out array"
+  if(debug_level.ge.100) print *, " unit: [second] -> [hour]"
   do t = 1, tmax, 1
-!     time(t) = time(t)/real(60.) ! uint: [second] -> [minute]
-     time(t) = real( time(t)/dble(3600.) ) ! uint: [second] -> [hour]
+!     time_out(t) = time_in(t)/real(60.) ! uint: [second] -> [minute]
+     time_out(t) = real( time_in(t)/dble(3600.) ) ! uint: [second] -> [hour]
   end do
 
   select case (varname)
   case ('qcbot','qctop')
      if(debug_level.ge.100) print *, " unit: [m] -> [km]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/dble(1000.) ! unit: [m] -> [km]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+        var_out(t) = var_in(t)/dble(1000.) ! unit: [m] -> [km]
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('rhmin','rhmax')
      if(debug_level.ge.100) print *, " unit: [%]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)*real(100.) ! unit: [%]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+        var_out(t) = var_in(t)*real(100.) ! unit: [%]
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('tmois')
-     if(debug_level.ge.100) print *, " unit: [kg] -> 10^9 [kg]"
+     if(debug_level.ge.100) print *, "output as relative error"
+     if(debug_level.ge.100) print *, " unit: [%] -> [* 10^-4 %]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/real(1.0d9) ! unit: [kg] -> 10^9 [kg]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+!        var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> 10^9 [kg]
+        var_out(t) = var_in(t)-var_in(1)
+        if(var_out(t).lt.1.0d3) then
+           var_out(t) = 0.
+        else
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('tmass')
-     if(debug_level.ge.100) print *, " unit: [kg] -> 10^11 [kg]"
+     if(debug_level.ge.100) print *, "output as relative error"
+     if(debug_level.ge.100) print *, " unit: [%] -> [* 10^-4 %]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/real(1.0d11) ! unit: [kg] -> 10^11 [kg]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+!        var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        var_out(t) = var_in(t)-var_in(1)
+        if(var_out(t).lt.1.0d3) then
+           var_out(t) = 0.
+        else
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('et')
-     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
+     if(debug_level.ge.100) print *, "output as relative error"
+     if(debug_level.ge.100) print *, " unit: [%] -> [* 10^-4 %]"
+!     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+!        var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        var_out(t) = var_in(t)-var_in(1)
+        if(var_out(t).lt.1.0d3) then
+           var_out(t) = 0.
+        else
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('ek')
-     if(debug_level.ge.100) print *, " unit: [kg] -> 10^12 [kg]"
+     if(debug_level.ge.100) print *, "output as relative error"
+     if(debug_level.ge.100) print *, " unit: [%] -> [* 10^-4 %]"
+!     if(debug_level.ge.100) print *, " unit: [kg] -> 10^12 [kg]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/real(1.0d12) ! unit: [kg] -> 10^12 [kg]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+!        var_out(t) = var_in(t)/real(1.0d12) ! unit: [kg] -> 10^12 [kg]
+!        var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        var_out(t) = var_in(t)-var_in(1)
+        if(var_out(t).lt.1.0d3) then
+           var_out(t) = 0.
+        else
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('ei')
-     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
+     if(debug_level.ge.100) print *, "output as relative error"
+     if(debug_level.ge.100) print *, " unit: [%] -> [* 10^-4 %]"
+!     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+!        var_out(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
+!        var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        var_out(t) = var_in(t)-var_in(1)
+        if(var_out(t).lt.1.0d3) then
+           var_out(t) = 0.
+        else
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('ep')
-     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
+     if(debug_level.ge.100) print *, "output as relative error"
+     if(debug_level.ge.100) print *, " unit: [%] -> [* 10^-4 %]"
+!     if(debug_level.ge.100) print *, " unit: [kg] -> 10^16 [kg]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+!        var_out(t) = var_in(t)/real(1.0d16) ! unit: [kg] -> 10^16 [kg]
+!        var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        var_out(t) = var_in(t)-var_in(1)
+        if(var_out(t).lt.1.0d3) then
+           var_out(t) = 0.
+        else
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('le')
-     if(debug_level.ge.100) print *, " unit: [kg] -> 10^13 [kg]"
+     if(debug_level.ge.100) print *, "output as relative error"
+     if(debug_level.ge.100) print *, " unit: [%] -> [* 10^-4 %]"
+!     if(debug_level.ge.100) print *, " unit: [kg] -> 10^13 [kg]"
      do t = 1, tmax, 1
-        var_in(t) = var_in(t)/real(1.0d13) ! unit: [kg] -> 10^13 [kg]
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+!        var_out(t) = var_in(t)/real(1.0d13) ! unit: [kg] -> 10^13 [kg]
+        var_out(t) = var_in(t)-var_in(1)
+        if(var_out(t).lt.1.0d3) then
+           var_out(t) = 0.
+        else
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case default
      do t = 1, tmax, 1
-        var_in(t) = real(var_in(t))
-        if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+        var_out(t) = real(var_in(t))
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
      
   end select
@@ -168,8 +230,8 @@ program ncedit_stats
 
   ! writeout data to output file
   do t = 1, tmax, 1
-     write(20,111) time(t), var_in(t)
-     if(debug_level.ge.200) print 222, "t,time,var_in = ",t,time(t),var_in(t)
+     write(20,111) time_out(t), var_out(t)
+     if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
   end do
   if(debug_level.ge.100) print *, "Success: write out data to the output file"
 
@@ -177,11 +239,17 @@ program ncedit_stats
   close(unit=20)
   if(debug_level.ge.100) print *, "Success: close the output file"
   if(debug_level.ge.100) print *, ""
-  if(debug_level.ge.100) print *, "All done."
 
   ! formats
 111 format(f8.3,f18.8)
-222 format(a17,i5,f8.3,f18.8)
+222 format(a22,i5,f8.3,f18.8)
+
+  ! deallocate the allocated arrays in this program
+  deallocate( time_in,time_out,var_in,var_out )
+  if(debug_level.ge.100) print *, "Success: deallocate the allocated arrays"
+  if(debug_level.ge.100) print *, ""
+
+  if(debug_level.ge.100) print *, "All done."
 
 contains
   

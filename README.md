@@ -13,7 +13,14 @@ NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB ver. 1.2.5 を事前にコンパイル�
 
 Intel, PGI, GNU fortran コンパイラのどれかを選択します。
 
-使用するコンパイラは、コンパイル済みのライブラリで使用したコンパイラと一致している必要が有ります。
+ここでは例として PGI コンパイラを選択します (コメントアウトして下さい)。
+```
+#COMPILER=INTEL
+#COMPILER=GNU
+COMPILER=PGI
+```
+
+注意：使用するコンパイラは、コンパイル済みのライブラリで使用したコンパイラと一致している必要が有ります。
 
 
 編集が完了したら make します。
@@ -21,13 +28,13 @@ Intel, PGI, GNU fortran コンパイラのどれかを選択します。
  $ make
 ```
 
-ncedit
+ncedit, ncedit_stats
 
 というバイナリが作成されていたら OK 。
 
 
 ## 使用方法
-基本的には、namelist.ncedit を編集し、使用する (あまり ncedit.f90 本体を弄らないようにするため)。
+基本的には、namelist.ncedit or namelist.ncedit_stats を編集し、使用します (プログラム本体をあまり弄らないで良いようにするため)。
 
 ```
 &param
@@ -66,7 +73,25 @@ ncedit
 - 元データに無い変数の計算
 
 等のために出来るだけ単純化しているつもりです。
-どんどん追加していきますが、単純な構造を保ちつつ複雑にならないように設計していくつもりです。
+今後はこの単純な構造を保ちつつ複雑にならないように設計していくつもりです。
+
+
+## 出力データの確認 (ncdump, ncview 等)
+```
+ $ ncdump -h hoge.nc4
+```
+や
+```
+ $ ncview hoge.nc4
+```
+等で簡易確認出来ます。
+
+
+## 出力データの描画 (GMT)
+以下の3つのタイプを用意しています。
+- gmtplot_xz.sh    ncedit.f90 で出力した x-z 断面データ用
+- gmtplot_xt.sh    ncedit.f90 で出力した x-t 断面データ用
+- gmtplot_stats.sh ncedit_stats.f90 で出力した一次元データ用
 
 
 # 謝辞

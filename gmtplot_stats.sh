@@ -38,10 +38,10 @@ elif test ${prefix} = "qctop" ; then
     title="CLOUD TOP HEIGHT"
     ylabel="${prefix} [km]"
     VARMIN=0.0
-    VARMAX=6.0
+    VARMAX=12.0
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a1f0.5
-    PRJ=x1.0/0.5
+    YINT=a5f1
+    PRJ=x1.0/0.25
 
 elif test  ${prefix} = "wmin" ; then
     title="MINIMUM VERTICAL VELOCITY"
@@ -56,10 +56,10 @@ elif test  ${prefix} = "wmax" ; then
     title="MAXIMUM VERTICAL VELOCITY"
     ylabel="${prefix} [m s@+-1@+]"
     VARMIN=0.0
-    VARMAX=6.0
+    VARMAX=12.0
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a1f0.5
-    PRJ=x1.0/0.5
+    YINT=a5f1
+    PRJ=x1.0/0.25
 
 elif test  ${prefix} = "rhmin" ; then
     title="MINIMUM RELATIVE HUMIDITY"
@@ -80,40 +80,45 @@ elif test  ${prefix} = "rhmax" ; then
     PRJ=x1.0/0.1
 
 elif test  ${prefix} = "tmois" ; then
-    title="TOTAL MOISTURE"
-    ylabel="${prefix} * 10@+9@+ [kg]"
-    VARMIN=42.0
-    VARMAX=45.0
+    title="TOTAL MOISTURE ERROR"
+#    ylabel="${prefix} * 10@+9@+ [kg]"
+#    VARMIN=30.0
+#    VARMAX=60.0
+#    YINT=a10f5
+#    PRJ=x1.0/0.1
+    ylabel="${prefix} [@~\264@~ 10@+-4@+ %]"
+    VARMIN=0.0
+    VARMAX=60.0
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a1.0f0.5
-    PRJ=x1.0/1.0
+    YINT=a10f5
+    PRJ=x1.0/0.05
 
 elif test  ${prefix} = "tmass" ; then
-    title="TOTAL DRY AIR MASS"
-    ylabel="${prefix} * 10@+11@+ [kg]"
-    VARMIN=73.54
-    VARMAX=73.66
+    title="TOTAL MASS ERROR"
+    ylabel="${prefix} [@~\264@~ 10@+-4@+ %]"
+    VARMIN=0.0
+    VARMAX=120.0
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a0.05f0.01
-    PRJ=x1.0/25
+    YINT=a20f10
+    PRJ=x1.0/0.025
 
 elif test  ${prefix} = "et" ; then
-    title="TOTAL ENERGY"
-    ylabel="${prefix} * 10@+16@+ [kg]"
-    VARMIN=189.17
-    VARMAX=189.37
+    title="TOTAL ENERGY ERROR"
+    ylabel="${prefix} [@~\264@~ 10@+-4@+ %]"
+    VARMIN=0.0
+    VARMAX=120.0
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a0.1f0.01
-    PRJ=x1.0/30
+    YINT=a20f10
+    PRJ=x1.0/0.025
 
 elif test  ${prefix} = "ek" ; then
-    title="TOTAL ENERGY"
+    title="TOTAL KINETIC ENERGY"
     ylabel="${prefix} * 10@+12@+ [kg]"
-    VARMIN=134.5
-    VARMAX=137.5
+    VARMIN=120.0
+    VARMAX=150.0
     RANGE=${TMIN}/${TMAX}/${VARMIN}/${VARMAX}
-    YINT=a1.0f0.5
-    PRJ=x1.0/1.0
+    YINT=a10f5
+    PRJ=x1.0/0.1
 
 else
     echo "stop"
