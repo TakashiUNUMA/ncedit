@@ -5,8 +5,8 @@
 #
 
 #COMPILER=INTEL
-#COMPILER=GNU
-COMPILER=PGI
+COMPILER=GNU
+#COMPILER=PGI
 
 #-------------------------------------------------
 # Make for Intel Compiler on Linux x86_64 system
@@ -28,7 +28,8 @@ endif
 ifeq ($(COMPILER),GNU)
 FC      = gfortran
 #FFLAGS	 = -frecord-marker=4 -ffree-form -O3 -ftree-vectorize -funroll-loops -fno-range-check
-FFLAGS	 = -frecord-marker=4 -ffree-form -O -Wall -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbounds-check -fno-range-check
+#FFLAGS	 = -frecord-marker=4 -ffree-form -O -Wall -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbounds-check -fno-range-check
+FFLAGS	 = -frecord-marker=4 -ffree-form -O -Wall -ffpe-trap=invalid,zero,overflow -fbounds-check -fno-range-check
 # -- rx2000,gpgpu
 #NETCDF  = /home/unuma/usr/local/netcdf-4.1.3-gnu
 #ZLIB    = /home/unuma/usr/local/zlib-1.2.5-gnu
