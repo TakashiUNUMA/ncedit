@@ -19,7 +19,7 @@ program ncedit
   real, dimension(:,:,:,:), allocatable :: var_in
   real, dimension(:),       allocatable :: ix, iy
   real, dimension(:,:),     allocatable :: var_out
-  character(len=20) :: varname
+  character(len=20) :: varname, interp_method
   character(len=42) :: input, output
   integer :: debug_level
 
@@ -385,58 +385,70 @@ program ncedit
         iy(k) = (k-1)*dy
      end do
      if(debug_level.ge.200) print *, " iy(:)         = ", iy
-     ! z coordinate points are manually selected as follows;
-     do j = 1, ny, 1
-        if (j.eq.1) then
-           ipoint = 1
-        else if (j.eq.2) then
-           ipoint = 5
-        else if (j.eq.3) then
-           ipoint = 10
-        else if (j.eq.4) then
-           ipoint = 15
-        else if (j.eq.5) then
-           ipoint = 19
-        else if (j.eq.6) then
-           ipoint = 22
-        else if (j.eq.7) then
-           ipoint = 24
-        else if (j.eq.8) then
-           ipoint = 26
-        else if (j.eq.9) then
-           ipoint = 28
-        else if (j.eq.10) then
-           ipoint = 29
-        else if (j.eq.11) then
-           ipoint = 31
-        else if (j.eq.12) then
-           ipoint = 32
-        else if (j.eq.13) then
-           ipoint = 34
-        else
-           ipoint = ipoint + 1
-        end if
-        var_out(:,j) = tmp(:,ipoint)
-        if(debug_level.ge.200) print *, " var_out(",xselect,",",j,") = ", var_out(xselect,j)
-        !ccccc interpolation is not work well... ccccc
-        ! call nearest_search_1d( iy, y(j), ipoint)
-        ! call interpo_search_1d( iy, y(j), ipoint)
-        ! if(debug_level.ge.100) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
-        ! var_out(:,j) = tmp(:,ipoint)
-        ! do i = 1, imax, 1
-        !    var_out(i,j) = tmp(i,ipoint)
-        ! end do
-        !ccccccccccccccccccccccccccccccccccccccccccccc
-     end do
-     !ccccc interpolation is not work well... ccccc
-     ! if(debug_level.ge.100) print *, " ny            = ", ny
-     ! if(debug_level.ge.100) print *, " iy(:)         = ", iy
-     ! do i = 1, imax
-     !    CALL nearest_interp_1d( kmax, y(:), tmp(i,:), ny, iy(:), var_out(i,:) )
-     !    if(debug_level.ge.100) print *, " var_out(",i,",:) = ", var_out(i,:)
-     ! end do
-     !ccccccccccccccccccccccccccccccccccccccccccccc
-     
+
+     interp_method = 'manual'
+     select case (interp_method)
+     case ('manual')
+        ! z coordinate points are manually selected as follows;
+        do j = 1, ny, 1
+           if (j.eq.1) then
+              ipoint = 1
+           else if (j.eq.2) then
+              ipoint = 5
+           else if (j.eq.3) then
+              ipoint = 10
+           else if (j.eq.4) then
+              ipoint = 15
+           else if (j.eq.5) then
+              ipoint = 19
+           else if (j.eq.6) then
+              ipoint = 22
+           else if (j.eq.7) then
+              ipoint = 24
+           else if (j.eq.8) then
+              ipoint = 26
+           else if (j.eq.9) then
+              ipoint = 28
+           else if (j.eq.10) then
+              ipoint = 29
+           else if (j.eq.11) then
+              ipoint = 31
+           else if (j.eq.12) then
+              ipoint = 32
+           else if (j.eq.13) then
+              ipoint = 34
+           else
+              ipoint = ipoint + 1
+           end if
+           var_out(:,j) = tmp(:,ipoint)
+           if(debug_level.ge.200) print *, " var_out(",xselect,",",j,") = ", var_out(xselect,j)
+        end do
+
+     case ('stpk')
+        ! z coordinate points are linearly interpolated by STPK library
+        do j = 1, ny, 1
+           call nearest_search_1d( iy, z(j), ipoint)
+           call interpo_search_1d( iy, z(j), ipoint)
+           if(debug_level.ge.100) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
+           var_out(:,j) = tmp(:,ipoint)
+           do i = 1, imax, 1
+              var_out(i,j) = tmp(i,ipoint)
+           end do
+        end do
+
+     case ('near')
+        do i = 1, imax
+           CALL nearest_interp_1d( kmax, y(:), tmp(i,:), ny, iy(:), var_out(i,:) )
+           if(debug_level.ge.100) print *, " var_out(",i,",:) = ", var_out(i,:)
+        end do
+
+     case ('linear')
+        do i = 1, imax
+           CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
+        end do
+
+     end select
+
   else if (flag.eq.3) then
      ! x-t array
      if(debug_level.ge.100) print *, "x-t array"
@@ -527,6 +539,51 @@ contains
        stop 2
     end if
   end subroutine check
+
+
+  !ccccccccccccccccccccccccccccccccccccccccccccccccc
+  ! subroutine of find4point
+  !ccccccccccccccccccccccccccccccccccccccccccccccccc
+  subroutine find4point( znum, z_in, z_tmp, ipoint, debug_level )
+    implicit none
+    integer :: i, znum, ipoint
+    real, dimension(znum) :: z_in
+    real :: z_tmp
+    integer :: debug_level
+    do i = 1, znum
+       if (z_tmp.ge.z_in(i)) then
+          ipoint = i
+          if(debug_level.ge.200) print *, " DEBUG: i,z_tmp,z_in,ipoint = ", i,z_tmp,z_in(i),ipoint
+       end if
+    end do
+    if(debug_level.ge.200) print *, " DEBUG: ipoint = ", ipoint
+  end subroutine find4point
+
+
+  !ccccccccccccccccccccccccccccccccccccccccccccccccc
+  ! subroutine of interp_linear
+  !ccccccccccccccccccccccccccccccccccccccccccccccccc
+  subroutine interp_linear( znum, iznum, z_in, z_out, data_in, data_out, debug_level )
+    implicit none
+    integer :: i, znum, iznum
+    real, dimension(znum)  :: z_in, data_in
+    real, dimension(iznum) :: z_out, data_out
+    real :: tmp
+    integer :: debug_level
+    do i = 1, iznum
+       if(i.eq.1) then
+          data_out(i) = z_in(i)
+       else
+          ! 1. 内挿点の１つ前と後の座標及び値を取得: find4point
+          CALL find4point( znum, z_in, z_out(i), ipoint, debug_level )
+          ! 2. 用意した４点を基に tmp を計算
+          tmp = (data_in(ipoint+1)-data_in(ipoint))/(z_in(ipoint+1)-z_in(ipoint))
+          ! 3. 内挿点 data_out(i) を計算
+          data_out(i) = (tmp*z_out(i)) + data_in(ipoint) - (tmp*z_in(ipoint))
+       end if
+!       if(debug_level.ge.200) print *, " i,z_out,data_out = ", i, z_out(i), data_out(i)
+    end do
+  end subroutine interp_linear
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc

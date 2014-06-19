@@ -2,7 +2,7 @@
  imax               = 128
  jmax		    = 128
  kmax		    = 64
- tmax		    = 61
+ tmax		    = 361
 ! varname	    = "water"
  varname	    = "dbz"
 ! varname	    = "buoyancy"
@@ -16,8 +16,8 @@
  input		    = "cm1out.nc"
  xselect	    = 64
  yselect	    = 64
-! zselect	    = 1
- zselect	    = 20
+ zselect	    = 1
+! zselect	    = 20
  tselect	    = 60
 ! output		    = "water.nc4"
 ! output		    = "buoyancy.nc4"
@@ -29,13 +29,13 @@
 ! output		    = "rain.nc4"
 ! output		    = "cref.nc4"
 ! output		    = "cpc.nc4"
- flag		    = 1     ! x-y
-! flag		    = 2     ! x-z
+! flag		    = 1     ! x-y
+ flag		    = 2     ! x-z
 ! flag		    = 3     ! x-t
  nx		    = 128   ! x-y
 ! nx		    = 128   ! x-z
- ny		    = 128   ! x-y
-! ny		    = 41    ! x-z
+! ny		    = 128   ! x-y
+ ny		    = 41    ! x-z
 ! ny		    = 61    ! x-t
  dy	            = 0.500 ! please keep it
  deflate_level      = 2

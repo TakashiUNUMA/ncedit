@@ -127,6 +127,7 @@ ncedit, ncedit_stats
 
 # TODO
 - x-y 断面の拡張
+- x-z 断面出力時の z 軸内挿 (要修正: オリジナルがストレッチ座標の場合、interp_linear だと manual とは違うグリッドを選択している模様)
 
 
 # その他
