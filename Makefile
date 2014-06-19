@@ -5,8 +5,8 @@
 #
 
 #COMPILER=INTEL
-COMPILER=GNU
-#COMPILER=PGI
+#COMPILER=GNU
+COMPILER=PGI
 
 #-------------------------------------------------
 # Make for Intel Compiler on Linux x86_64 system

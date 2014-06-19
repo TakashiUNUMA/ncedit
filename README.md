@@ -4,7 +4,7 @@ __多次元 NetCDF ファイルから GMT で描画用の 2次元 NetCDF をは�
 
 
 ## コンパイル
-NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB ver. 1.2.5 を事前にコンパイルしておいて下さい。
+NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB ver. 1.2.5 を事前にコンパイル・インストールしておいて下さい。
 
 上記のライブラリの準備は、[こちら](https://github.com/TakashiUNUMA/wrflib_instsh) を参照。
 
@@ -39,7 +39,7 @@ ncedit, ncedit_stats
 ```
 &param
  imax               = 256          ! x 方向の grid 数
- jmax               = 3            ! y 方向の grid 数
+ jmax               = 256          ! y 方向の grid 数
  kmax               = 64           ! z 方向の grid 数
  tmax               = 361          ! t 方向の grid 数
  varname            = "water"      ! NetCDF の変数名 或いは ncedit.f90 内で定義した変数名
@@ -50,20 +50,32 @@ ncedit, ncedit_stats
  tselect            = 240          ! 出力する 2 次元 NetCDF ファイルで選択される grid 番号
  output             = "water.nc4"  ! 出力する 2 次元 NetCDF ファイル名
  flag               = 2            ! 出力する次元 1: x-y, 2: x-z, 3: x-t (x-y はまだきちんと書いてない)
- ny                 = 41           ! 出力する 2 次元 NetCDF ファイルの y 軸方向の grid 数 (x-z 断面用)
+ nx                 = 256          ! 出力する 2 次元 NetCDF ファイルの x 軸方向の grid 数 (x-y, x-z 断面用)
+ ny                 = 41           ! 出力する 2 次元 NetCDF ファイルの y 軸方向の grid 数 (x-y, x-z 断面用)
  dy                 = 0.500        ! 出力する 2 次元 NetCDF ファイルの y 軸方向の格子間隔 (x-z 断面用)
  deflate_level      = 2            ! NetCDF4 の deflate level
  debug_level        = 100          ! デバッグレベル
 /
 ```
 
-例えば、4 次元データを x-z の 2 次元に次元をおとして出力する場合は、以下のようにする。
+例1: 4 次元データを x-y の 2 次元に次元をおとして出力する場合
+```
+ flag    = 1      ( x-y 断面 )
+ tselect = 240    ( 計算開始から 240 ステップ目 )
+ xselect = 128    ( x 軸の 128 grid 目 )
+ yselect = 128    ( y 軸の 128 grid 目 )
+ nx      = 256    ( grid 数: x 軸 )
+ ny      = 256    ( grid 数: y 軸 )
+```
+
+例2: 4 次元データを x-z の 2 次元に次元をおとして出力する場合
 ```
  flag    = 2      ( x-z 断面 )
  tselect = 240    ( 計算開始から 240 ステップ目 )
  yselect = 2      ( y 軸の 2 grid 目 )
+ nx      = 256    ( grid 数: x 軸 )
  dy      = 0.500  ( 元のデータが stretch だったので、0.5 km の等格子間隔に直すためのもの )
- ny      = 41     ( その時の grid 数 )
+ ny      = 41     ( 上記の格子間隔での grid 数: y 軸 )
 ```
 
 また、ncedit.f90 は、
@@ -72,7 +84,7 @@ ncedit, ncedit_stats
 - 出力時の単位変換
 - 元データに無い変数の計算
 
-等のために出来るだけ単純化しているつもりです。
+等のため、出来るだけ単純化しているつもりです。
 今後はこの単純な構造を保ちつつ複雑にならないように設計していくつもりです。
 
 
@@ -89,9 +101,9 @@ ncedit, ncedit_stats
 
 ## 出力データの描画 (GMT)
 以下の3つのタイプを用意しています。
-- gmtplot_xz.sh    ncedit.f90 で出力した x-z 断面データ用
-- gmtplot_xt.sh    ncedit.f90 で出力した x-t 断面データ用
-- gmtplot_stats.sh ncedit_stats.f90 で出力した一次元データ用
+- gmtplot_xz.sh      # ncedit.f90 で出力した x-z 断面データ用
+- gmtplot_xt.sh      # ncedit.f90 で出力した x-t 断面データ用
+- gmtplot_stats.sh   # ncedit_stats.f90 で出力した一次元データ用
 
 
 # 謝辞
@@ -105,8 +117,6 @@ ncedit, ncedit_stats
 
 
 # TODO
-- x-y 断面追記
-- 時刻処理
 
 
 # その他

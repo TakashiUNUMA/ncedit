@@ -1,7 +1,7 @@
 !
 ! Program of ncedit.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/18
+! Last modified: 2014/06/19
 !
 
 program ncedit
