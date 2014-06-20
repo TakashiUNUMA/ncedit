@@ -1,7 +1,7 @@
 #
-# Makefile for ncedit.f90
+# Makefile for ncedit.f90 and ncedit_stats.f90
 # original makefile coded by Takashi Unuma, Kyoto Univ.
-# Last modified: 2014/06/14
+# Last modified: 2014/06/16
 #
 
 #COMPILER=INTEL
@@ -28,8 +28,7 @@ endif
 ifeq ($(COMPILER),GNU)
 FC      = gfortran
 #FFLAGS	 = -frecord-marker=4 -ffree-form -O3 -ftree-vectorize -funroll-loops -fno-range-check
-#FFLAGS	 = -frecord-marker=4 -ffree-form -O -Wall -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbounds-check -fno-range-check
-FFLAGS	 = -frecord-marker=4 -ffree-form -O -Wall -ffpe-trap=invalid,zero,overflow -fbounds-check -fno-range-check
+FFLAGS	 = -frecord-marker=4 -ffree-form -O -Wall -Wuninitialized -ffpe-trap=invalid,zero,overflow -fbounds-check -fno-range-check
 # -- rx2000,gpgpu
 #NETCDF  = /home/unuma/usr/local/netcdf-4.1.3-gnu
 #ZLIB    = /home/unuma/usr/local/zlib-1.2.5-gnu
@@ -47,7 +46,8 @@ endif
 # Make for PGI Compiler on Linux x86_64 system
 ifeq ($(COMPILER),PGI)
 FC	= pgfortran
-FFLAGS	= -pc 64 -Kieee -O0 -Ktrap=fp -Minform=inform -Mbounds -Mlre=noassoc
+FFLAGS	= -pc 64 -Mfree -O3 -fast -tp bulldozer -Ktrap=none
+#FFLAGS	= -pc 64 -Kieee -O0 -Ktrap=fp -Minform=inform -Mbounds -Mlre=noassoc
 # -- nimbus
 NETCDF	= /usr/local/netcdf-4.1.3-pgi
 ZLIB	= /usr/local/zlib-1.2.5-pgi
