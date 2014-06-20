@@ -1,7 +1,7 @@
 #
 # Makefile for ncedit.f90 and ncedit_stats.f90
 # original makefile coded by Takashi Unuma, Kyoto Univ.
-# Last modified: 2014/06/16
+# Last modified: 2014/06/20
 #
 
 #COMPILER=INTEL
