@@ -46,8 +46,8 @@ endif
 # Make for PGI Compiler on Linux x86_64 system
 ifeq ($(COMPILER),PGI)
 FC	= pgfortran
-FFLAGS	= -pc 64 -Mfree -O3 -fast -tp bulldozer -Ktrap=none
-#FFLAGS	= -pc 64 -Kieee -O0 -Ktrap=fp -Minform=inform -Mbounds -Mlre=noassoc
+#FFLAGS	= -pc 64 -Mfree -O3 -fast -tp bulldozer -Ktrap=none
+FFLAGS	= -pc 64 -Kieee -O0 -Ktrap=fp -Minform=inform -Mbounds -Mlre=noassoc
 # -- nimbus
 NETCDF	= /usr/local/netcdf-4.1.3-pgi
 ZLIB	= /usr/local/zlib-1.2.5-pgi
