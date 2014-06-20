@@ -1,7 +1,7 @@
 !
 ! Program of ncedit.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/19
+! Last modified: 2014/06/20
 !
 
 program ncedit
@@ -10,10 +10,9 @@ program ncedit
   
   implicit none
 
-  integer :: imax, jmax, kmax, tmax, deflate_level
+  ! I/O values and arrays
+  integer :: imax, jmax, kmax, tmax
   integer :: flag, xselect, yselect, zselect, tselect
-  integer, dimension(2) :: start, count, dimids, chunks
-  integer, dimension(4) :: istart, icount
   real :: dy
   real, dimension(:),       allocatable :: x, y, z, time_in
   real, dimension(:,:,:,:), allocatable :: var_in
@@ -21,11 +20,13 @@ program ncedit
   real, dimension(:,:),     allocatable :: var_out
   character(len=20) :: varname, interp_method
   character(len=42) :: input, output
-  integer :: debug_level
+  integer :: deflate_level, debug_level
 
   ! local variables
   integer :: i, j, k, t, ipoint, nx, ny
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
+  integer, dimension(2) :: ostart, ocount, dimids, chunks
+  integer, dimension(4) :: istart, icount
   real :: tmp0
   real, dimension(:,:),   allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
 
@@ -40,7 +41,7 @@ program ncedit
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   namelist /param/ imax,jmax,kmax,tmax,varname,input,      &
                    xselect,yselect,zselect,tselect,output, &
-                   flag,nx,ny,dy,                          &
+                   flag,nx,ny,dy,interp_method,            &
                    deflate_level,debug_level
   open(unit=10,file='namelist.ncedit',form='formatted',status='old',access='sequential')
   read(10,nml=param)
@@ -62,6 +63,7 @@ program ncedit
   if(debug_level.ge.100) print '(a18,i6)',  "  nx           = ", nx
   if(debug_level.ge.100) print '(a18,i6)',  "  ny           = ", ny
   if(debug_level.ge.100) print '(a18,f6.3)',"  dy           = ", dy
+  if(debug_level.ge.100) print '(a18,a)',   " interp_method = ", trim(interp_method)
   if(debug_level.ge.100) print '(a18,i6)',  " deflate_level = ", deflate_level
   if(debug_level.ge.100) print '(a18,i6)',  " debug_level   = ", debug_level
   if(debug_level.ge.100) print '(a30)',     "----- values on namelist -----"
@@ -386,7 +388,6 @@ program ncedit
      end do
      if(debug_level.ge.200) print *, " iy(:)         = ", iy
 
-     interp_method = 'manual'
      select case (interp_method)
      case ('manual')
         ! z coordinate points are manually selected as follows;
@@ -421,33 +422,33 @@ program ncedit
               ipoint = ipoint + 1
            end if
            var_out(:,j) = tmp(:,ipoint)
-           if(debug_level.ge.200) print *, " var_out(",xselect,",",j,") = ", var_out(xselect,j)
+        end do
+
+     case ('linear')
+        ! z coordinate points are linearly interpolated by interp_linear
+        do i = 1, imax
+           CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
+        end do
+
+     case ('near')
+        ! z coordinate points are interpolated by nearest_interp_1d
+        do i = 1, imax
+           CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
         end do
 
      case ('stpk')
         ! z coordinate points are linearly interpolated by STPK library
-        do j = 1, ny, 1
-           call nearest_search_1d( iy, z(j), ipoint)
-           call interpo_search_1d( iy, z(j), ipoint)
-           if(debug_level.ge.100) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
-           var_out(:,j) = tmp(:,ipoint)
+        do j = 2, ny-1, 1
+!           call nearest_search_1d( z, iy(j), ipoint)
+           call interpo_search_1d( z, iy(j), ipoint)
+           if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
            do i = 1, imax, 1
               var_out(i,j) = tmp(i,ipoint)
            end do
         end do
 
-     case ('near')
-        do i = 1, imax
-           CALL nearest_interp_1d( kmax, y(:), tmp(i,:), ny, iy(:), var_out(i,:) )
-           if(debug_level.ge.100) print *, " var_out(",i,",:) = ", var_out(i,:)
-        end do
-
-     case ('linear')
-        do i = 1, imax
-           CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
-        end do
-
      end select
+     if(debug_level.ge.100) print *, " var_out(",xselect,",:) = ", var_out(xselect,:)
 
   else if (flag.eq.3) then
      ! x-t array
@@ -455,6 +456,7 @@ program ncedit
      ix(:) = x(:)
      iy(:) = real(time_in(:)/dble(60.)) ! uint: [minute] -> [hour]
 !     iy(:) = time(:) ! uint: [second]
+
      select case (varname)
      case ('rain')
         if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
@@ -466,6 +468,7 @@ program ncedit
         end do
         if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
         end do
+
      case default
         do t = 1, tmax, 1
         do i = 1, imax, 1
@@ -473,7 +476,9 @@ program ncedit
         end do
         if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
         end do
+
      end select
+
   end if
   if(debug_level.ge.100) print *, ""
 
@@ -514,9 +519,9 @@ program ncedit
 
 
   ! write the pretend data
-  start = (/ 1, 1 /)
-  count = (/ nx, ny /)
-  call check( nf90_put_var(ncid, varid, var_out, start = start, count = count) )
+  ostart = (/ 1, 1 /)
+  ocount = (/ nx, ny /)
+  call check( nf90_put_var(ncid, varid, var_out, start = ostart, count = ocount) )
   if(debug_level.ge.100) print *, "Success: write the pretend data"
 
   ! close the file
@@ -553,15 +558,17 @@ contains
     do i = 1, znum
        if (z_tmp.ge.z_in(i)) then
           ipoint = i
-          if(debug_level.ge.200) print *, " DEBUG: i,z_tmp,z_in,ipoint = ", i,z_tmp,z_in(i),ipoint
+          if(debug_level.ge.300) print *, " DEBUG: i,z_tmp,z_in,ipoint = ", i,z_tmp,z_in(i),ipoint
        end if
     end do
-    if(debug_level.ge.200) print *, " DEBUG: ipoint = ", ipoint
+    if(debug_level.ge.300) print *, " DEBUG: ipoint = ", ipoint
   end subroutine find4point
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! subroutine of interp_linear
+  !  original program coded by Takashi Unuma, Kyoto Univ.
+  !  last modified: 2014/06/20
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   subroutine interp_linear( znum, iznum, z_in, z_out, data_in, data_out, debug_level )
     implicit none
@@ -571,17 +578,17 @@ contains
     real :: tmp
     integer :: debug_level
     do i = 1, iznum
-       if(i.eq.1) then
-          data_out(i) = z_in(i)
-       else
+!       if(i.eq.1) then
+!          data_out(i) = data_in(i)
+!       else
           ! 1. 内挿点の１つ前と後の座標及び値を取得: find4point
           CALL find4point( znum, z_in, z_out(i), ipoint, debug_level )
           ! 2. 用意した４点を基に tmp を計算
           tmp = (data_in(ipoint+1)-data_in(ipoint))/(z_in(ipoint+1)-z_in(ipoint))
           ! 3. 内挿点 data_out(i) を計算
           data_out(i) = (tmp*z_out(i)) + data_in(ipoint) - (tmp*z_in(ipoint))
-       end if
-!       if(debug_level.ge.200) print *, " i,z_out,data_out = ", i, z_out(i), data_out(i)
+!       end if
+       if(debug_level.ge.300) print *, " i,z_out,data_out = ", i, z_out(i), data_out(i)
     end do
   end subroutine interp_linear
 
@@ -627,15 +634,11 @@ contains
     !
     !    Output, real ( kind = 8 ) YI(NI), the interpolated values.
     !
-
     implicit none
-    
     integer :: nd, ni
     integer :: i, j, k
-    
     real :: d, d2
     real :: xd(nd), xi(ni), yd(nd), yi(ni)
-    
     do i = 1, ni
        k = 1
        d = abs ( xi(i) - xd(k) )
