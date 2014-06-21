@@ -11,7 +11,6 @@ program ncedit
   implicit none
 
   ! I/O values and arrays
-  integer :: imax, jmax, kmax, tmax
   integer :: flag, xselect, yselect, zselect, tselect
   real :: dy
   real, dimension(:),       allocatable :: x, y, z, time_in
@@ -24,6 +23,7 @@ program ncedit
 
   ! local variables
   integer :: i, j, k, t, ipoint, nx, ny
+  integer :: imax, jmax, kmax, tmax
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
   integer, dimension(2) :: ostart, ocount, dimids, chunks
   integer, dimension(4) :: istart, icount
@@ -71,13 +71,6 @@ program ncedit
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
-  ! Initialization
-  !ccccccccccccccccccccccccccccccccccccccccccccccccc
-  allocate( x(imax), y(jmax), z(kmax), time_in(tmax), ix(nx), iy(ny) )
-  allocate( var_out(nx,ny) )
-  var_out(:,:) = nan
-
-  !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Input 4D file
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! open the original netcdf file
@@ -89,6 +82,10 @@ program ncedit
   call check( nf90_inq_varid(ncid, 'ni', xdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the xdimid"
   if(debug_level.ge.200) print *, " xdimid        = ", xdimid
+!  call check( nf90_inquire_dimension(ncid, xdimid, len = imax) )
+!  if(debug_level.ge.100) print *, "Success: inquire the xdimid"
+!  if(debug_level.ge.200) print *, "  imax         = ", imax
+  allocate( x(imax) )
   call check( nf90_get_var(ncid, xdimid, x) )
   if(debug_level.ge.100) print *, "Success: get the x coordinate"
   if(debug_level.ge.200) print *, " x(:)          = ", x
@@ -97,6 +94,10 @@ program ncedit
   call check( nf90_inq_varid(ncid, 'nj', ydimid) )
   if(debug_level.ge.100) print *, "Success: inquire the ydimid"
   if(debug_level.ge.200) print *, " ydimid        = ", ydimid
+!  call check( nf90_inquire_dimension(ncid, ydimid, len = jmax) )
+!  if(debug_level.ge.100) print *, "Success: inquire the ydimid"
+!  if(debug_level.ge.200) print *, "  jmax         = ", jmax
+  allocate( y(jmax) )
   call check( nf90_get_var(ncid, ydimid, y) )
   if(debug_level.ge.100) print *, "Success: get the y coordinate"
   if(debug_level.ge.200) print *, " y(:)          = ", y
@@ -105,6 +106,10 @@ program ncedit
   call check( nf90_inq_varid(ncid, 'nk', zdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the zdimid"
   if(debug_level.ge.200) print *, " zdimid        = ", zdimid
+!  call check( nf90_inquire_dimension(ncid, zdimid, len = kmax) )
+!  if(debug_level.ge.100) print *, "Success: inquire the zdimid"
+!  if(debug_level.ge.200) print *, "  kmax         = ", kmax
+  allocate( z(kmax) )
   call check( nf90_get_var(ncid, zdimid, z) )
   if(debug_level.ge.100) print *, "Success: get the z coordinate"
   if(debug_level.ge.200) print *, " z(:)          = ", z
@@ -113,6 +118,10 @@ program ncedit
   call check( nf90_inq_varid(ncid, 'time', tdimid) )
   if(debug_level.ge.100) print *, "Success: inquire the tdimid"
   if(debug_level.ge.200) print *, " tdimid        = ", tdimid
+!  call check( nf90_inquire_dimension(ncid, tdimid, len = tmax) )
+!  if(debug_level.ge.100) print *, "Success: inquire the tdimid"
+!  if(debug_level.ge.200) print *, "  tmax         = ", tmax
+  allocate( time_in(tmax) )
   call check( nf90_get_var(ncid, tdimid, time_in) )
   if(debug_level.ge.100) print *, "Success: get the time coordinate"
   if(debug_level.ge.200) print *, " time_in(:)    = ", time_in
@@ -344,6 +353,10 @@ program ncedit
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! make 2D array
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
+  allocate( ix(nx), iy(ny) )
+  allocate( var_out(nx,ny) )
+  var_out(:,:) = nan
+
   if(flag.eq.1) then
      ! x-y array
      ! select one of the 2D array

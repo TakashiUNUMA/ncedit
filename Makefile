@@ -1,12 +1,12 @@
 #
 # Makefile for ncedit.f90 and ncedit_stats.f90
 # original makefile coded by Takashi Unuma, Kyoto Univ.
-# Last modified: 2014/06/20
+# Last modified: 2014/06/21
 #
 
 #COMPILER=INTEL
-COMPILER=GNU
-#COMPILER=PGI
+#COMPILER=GNU
+COMPILER=PGI
 
 #-------------------------------------------------
 # Make for Intel Compiler on Linux x86_64 system

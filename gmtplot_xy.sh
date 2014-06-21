@@ -52,8 +52,8 @@ else
 fi
 
 # x and y label
-xlabel="Y [km]"
-ylabel="X [km]"
+xlabel="X [km]"
+ylabel="Y [km]"
 
 # other parameters for drawing GMT
 XINT=a50f10
@@ -62,7 +62,7 @@ RANGE=-100/100/-100/100
 PRJ=x0.025/0.025
 
 # wind vector options
-wind=1
+wind=0
 VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I5/5"
 VECTORPOS=65
 
