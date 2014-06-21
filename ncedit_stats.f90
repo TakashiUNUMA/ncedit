@@ -1,7 +1,7 @@
 !
 ! Program of ncedit_status.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/15
+! Last modified: 2014/06/21
 !
 
 program ncedit_stats
@@ -95,6 +95,13 @@ program ncedit_stats
      if(debug_level.ge.100) print *, " unit: [m] -> [km]"
      do t = 1, tmax, 1
         var_out(t) = var_in(t)/dble(1000.) ! unit: [m] -> [km]
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
+     end do
+
+  case ('maxqv','maxqr')
+     if(debug_level.ge.100) print *, " unit: [kg kg^-1] -> [g kg^-1]"
+     do t = 1, tmax, 1
+        var_out(t) = var_in(t)*real(1000.) ! unit: [kg kg^-1] -> [g kg^-1]
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 

@@ -2,7 +2,7 @@
 #
 # GMTPLOT
 # original script coded by Takashi Unuma, Kyoto Univ.
-# Last modified: 2014/06/14
+# Last modified: 2014/06/16
 #
 
 if test $# -lt 1 ; then
@@ -23,11 +23,13 @@ auto=0
 if test ${prefix} = "water" ; then
     title="Qc+Qr+Qi+Qs+Qg"
     unit="[g/kg]"
-    VARMIN=0.5
+    VARMIN=0.25
     VARMAX=4.0
-    VARINT=0.5
+    VARINT=0.25
     VARTYPE="seis"
-    BINT=a1f0.5
+#    VARTYPE="wysiyg"
+    BINT=a1f0.25
+    wind=1
 elif test ${prefix} = "dbz" ; then
     title="PSEUDO-REFLECTIVITY"
     unit="[dBZ]"
@@ -36,6 +38,7 @@ elif test ${prefix} = "dbz" ; then
     VARINT=5.0
     VARTYPE="seis"
     BINT=a10f5
+    wind=1
 elif test ${prefix} = "thetae" ; then
     title="EQUIVALENT POTENTIAL TEMPERATURE"
     unit="[K]"
@@ -44,6 +47,7 @@ elif test ${prefix} = "thetae" ; then
     VARINT=3.0
     VARTYPE="seis"
     BINT=a6f3
+    wind=1
 elif test ${prefix} = "buoyancy" ; then
     title="BUOYANCY"
     unit="[m@+2@+/s@+2@+]"
@@ -52,6 +56,7 @@ elif test ${prefix} = "buoyancy" ; then
     VARINT=0.005
     VARTYPE="polar"
     BINT=a0.05f0.005
+    wind=1
 elif test ${prefix} = "winterp" ; then
     title="VERTICAL VELOCITY"
     unit="[m/s]"
@@ -60,10 +65,12 @@ elif test ${prefix} = "winterp" ; then
     VARINT=1.0
     VARTYPE="polar"
     BINT=a2f1
+    wind=0
 else
     echo "automatically selected"
     title="${prefix}"
     auto=1
+    wind=0
 fi
 
 # x and y label
@@ -77,9 +84,12 @@ RANGE=-100/100/0/15
 PRJ=x0.05/0.2
 
 # wind vector options
-wind=0
-VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I4/1"
-VECTORPOS=25
+VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I8/2" # for dx = 1km
+#VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I16/2" # for dx = 500 m
+#VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I32/2" # for dx = 250 m
+#VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I64/2" # for dx = 125 m
+#VECTOROPT="-S50 -Q0.005/0.2/0.1n0.45 -G0 -I80/2" # for dx = 100 m
+VECTORPOS=75
 
 
 #------------------------------------------
@@ -98,7 +108,8 @@ gmtset GRID_PEN                   0.20p
 gmtset TICK_PEN                   0.50p
 gmtset MEASURE_UNIT                  cm
 #gmtset PAPER_MEDIA                   a4
-gmtset PAPER_MEDIA                  a4+
+#gmtset PAPER_MEDIA                  a4+
+gmtset PAPER_MEDIA                  a5+
 #gmtset PAPER_MEDIA              letter+
 #gmtset PAPER_MEDIA              ledger+
 gmtset VECTOR_SHAPE                   2
@@ -120,7 +131,8 @@ if test ${auto} -eq 1 ; then
 else
     unucpt ${infile%.nc4} ${VARMIN} ${VARMAX} ${VARINT} ${VARTYPE}
 fi
-grdimage ${infile} -J${PRJ} -R${RANGE} -C${CPALET} -X3.0 -Y3.0 ${gmtsta} > ${psfile}
+#grdimage ${infile} -J${PRJ} -R${RANGE} -C${CPALET} -X3.0 -Y3.0 ${gmtsta} > ${psfile}
+grdimage ${infile} -J${PRJ} -R${RANGE} -C${CPALET} -X2.0 -Y2.0 ${gmtsta} > ${psfile}
 
 # psscale
 gmtset ANOT_FONT_SIZE 8p
@@ -130,10 +142,10 @@ psscale -D1.35/-0.6/2.75/0.2h -B${BINT}/:"${unit}": -C${CPALET} -N ${gmtcon} >> 
 # grdvector
 if test ${wind} -eq 1 ; then
     grdvector uinterp_${suffix} winterp_${suffix} -J -R ${VECTOROPT} ${gmtcon} >> ${psfile}
-    psxy -R -J -Sv0.02/0.15/0.1 -L -G0 -W1 -N ${gmtcon} << EOF >> ${psfile}
+    psxy -J -R -Sv0.02/0.15/0.1 -L -G0 -W1 -N ${gmtcon} << EOF >> ${psfile}
   ${VECTORPOS} -3.5 0 0.4
 EOF
-    pstext -R -Jx -N -O -K << EOF >> $psfile
+    pstext -J -R -N -O -K << EOF >> ${psfile}
   ${VECTORPOS} -5 8 0.0 0 5 20 [m/s]
 EOF
 fi
@@ -163,15 +175,15 @@ EOF
 
 #rm -f ${psfile}
 rm -f .gmt*
-rm -f cpalet.cpt
+#rm -f cpalet.cpt
 
 done
 
-echo "ps2png..."
+#echo "ps2png..."
 #ls *.ps | parallel -j +0 ps2raster -Tg -A {}
-time ls *.eps | parallel -j 6 ps2raster -Tg -A {}
-echo "ps2pdf..."
+#time ls *.eps | parallel -j 6 ps2raster -Tg -A {}
+#echo "ps2pdf..."
 #ls *.ps | parallel -j +0 ps2raster -Tf -A {}
-time ls *.eps | parallel -j 6 ps2raster -Tf -A {}
-echo "done."
+#time ls *.eps | parallel -j 6 ps2raster -Tf -A {}
+#echo "done."
 #rm -f *.ps
