@@ -49,10 +49,14 @@ ncedit, ncedit_stats
  zselect            = 20           ! 出力する 2 次元 NetCDF ファイルで選択される grid 番号
  tselect            = 18           ! 出力する 2 次元 NetCDF ファイルで選択される grid 番号
  output             = "water.nc4"  ! 出力する 2 次元 NetCDF ファイル名
+ output_type        = "nc4"        ! 出力する 2 次元 NetCDF の種類 nc3: netcdf_classic, nc3_64bit: netcdf_64bit_offset, nc4: netcdf4
  flag               = 2            ! 出力する断面 1: x-y, 2: x-z, 3: x-t
  nx                 = 128          ! 出力する 2 次元断面の x 軸方向の grid 数 (x-y, x-z 断面用)
  ny                 = 41           ! 出力する 2 次元断面の y 軸方向の grid 数 (x-y, x-z 断面用)
+ dx                 = 0.500        ! 出力する 2 次元断面の x 軸方向の格子間隔 (x-y, x-z, x-t 断面用)
  dy                 = 0.500        ! 出力する 2 次元断面の y 軸方向の格子間隔 (x-z 断面用)
+ interp_x	    = 0            ! 出力する 2 次元断面の x 軸の内挿の有無 0: 内挿しない, 1: 内挿する
+ interp_y	    = 0            ! 出力する 2 次元断面の y 軸の内挿の有無 0: 内挿しない, 1: (interp_method で) 内挿する
  interp_method	    = 'linear'     ! x-z 断面出力時の y 軸の内挿方法
                                    !  'manual': 自分でグリッドを選ぶ
                                    !  'linear': 線形内挿
@@ -77,9 +81,12 @@ ncedit, ncedit_stats
  flag          = 2        ( x-z 断面 )
  yselect       = 2        ( y 軸の 2 grid 目 )
  tselect       = 240      ( 計算開始から 240 ステップ目 )
- nx	       = 256      ( grid 数: x 軸 )
- ny	       = 41       ( 上記の格子間隔での grid 数: y 軸 )
- dy	       = 0.500    ( 元のデータが stretch だったので、0.5 km の等格子間隔に直すためのもの )
+ nx	       = 256      ( 出力データの x 軸 grid 数 )
+ ny	       = 41       ( 出力データの y 軸 grid 数 )
+ dx	       = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ dy	       = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ interp_x      = 1        ( x 軸座標の内挿)
+ interp_y      = 1        ( y 軸座標の内挿 )
  interp_method = 'linear' ( y 軸の内挿方法 )
 ```
 
@@ -90,6 +97,8 @@ ncedit, ncedit_stats
  zselect       = 1        ( z 軸の 1 grid 目 )
  nx            = 128      ( grid 数: x 軸 )
  ny            = 128      ( grid 数: t 軸 )
+ interp_x      = 0        ( x 軸座標をそのまま出力 )
+ interp_y      = 0        ( y 軸座標をそのまま出力 )
 ```
 
 また、ncedit.f90 は、

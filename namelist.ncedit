@@ -1,8 +1,10 @@
 &param
  imax               = 256
- jmax		    = 256
+! jmax		    = 256
+ jmax		    = 3
  kmax		    = 64
- tmax		    = 37
+! tmax		    = 37
+ tmax		    = 361
 ! varname	    = "water"
 ! varname	    = "dbz"
 ! varname	    = "buoyancy"
@@ -15,35 +17,46 @@
 ! varname	    = "cpc"
  input		    = "cm1out.nc"
  xselect	    = 128
- yselect	    = 128
-! zselect	    = 1
- zselect	    = 20
- tselect	    = 2
-! output		    = "water.nc4"
-! output		    = "buoyancy.nc4"
-! output		    = "uinterp_180.nc4"
-! output		    = "vinterp_180.nc4"
-! output		    = "winterp_180.nc4"
+! yselect	    = 128
+ yselect	    = 2
+ zselect	    = 1
+! zselect	    = 20
+! tselect	    = 2
+ tselect	    = 180
+! output	    	    = "water.nc4"
+! output	    	    = "buoyancy.nc4"
+! output	    	    = "uinterp_180.nc4"
+! output	    	    = "vinterp_180.nc4"
+! output	    	    = "winterp_180.nc4"
 ! output		    = "dbz_180.nc4"
- output		    = "thetae_060.nc4"
+ output		    = "thetae_180.nc4"
 ! output		    = "rain.nc4"
 ! output		    = "cref.nc4"
 ! output		    = "cpc.nc4"
- flag		    = 1     ! x-y
-! flag		    = 2     ! x-z
+! output_type	    = "nc3"
+! output_type	    = "nc3_64bit"
+ output_type	    = "nc4"
+! flag		    = 1     ! x-y
+ flag		    = 2     ! x-z
 ! flag		    = 3     ! x-t
  nx		    = 256   ! x-y, x-z in flag = 1 and 2
- ny		    = 256   ! x-y in flag = 1
+! ny		    = 256   ! x-y in flag = 1
+ ny		    = 64    ! x-z in flag = 2 if the use of original coordinate
 ! ny		    = 41    ! x-z in flag = 2 if dy = 0.500
 ! ny		    = 81    ! x-z in flag = 2 if dy = 0.250
 ! ny		    = 61    ! x-t in flag = 3
- dy	            = 0.500 ! delta y, which will be interpolated in flag = 2
-! dy	            = 0.250 ! delta y, which will be interpolated in flag = 2
+ dx	            = 1.000 ! delta x, which will be interpolated in flag = 2
+ dy	            = 0.500 ! delta y, which will be interpolated in flag = 2 using the option of interp_method
+! dy	            = 0.250 ! delta y, which will be interpolated in flag = 2 using the option of interp_method
+! interp_x	    = 1
+ interp_x	    = 0
+! interp_y	    = 1
+ interp_y	    = 0
 ! interp_method	    = 'manual'
  interp_method	    = 'linear'
 ! interp_method	    = 'near'
 ! interp_method	    = 'stpk'
- deflate_level      = 2
+ deflate_level      = 9
 ! debug_level        = 100
  debug_level        = 200
 /

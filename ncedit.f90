@@ -1,7 +1,7 @@
 !
 ! Program of ncedit.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/20
+! Last modified: 2014/06/29
 !
 
 program ncedit
@@ -12,12 +12,13 @@ program ncedit
 
   ! I/O values and arrays
   integer :: flag, xselect, yselect, zselect, tselect
-  real :: dy
+  integer :: interp_x, interp_y
+  real :: dx,dy
   real, dimension(:),       allocatable :: x, y, z, time_in
   real, dimension(:,:,:,:), allocatable :: var_in
   real, dimension(:),       allocatable :: ix, iy
   real, dimension(:,:),     allocatable :: var_out
-  character(len=20) :: varname, interp_method
+  character(len=20) :: varname, interp_method, output_type
   character(len=42) :: input, output
   integer :: deflate_level, debug_level
 
@@ -39,9 +40,10 @@ program ncedit
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Input parameters from namelist
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
-  namelist /param/ imax,jmax,kmax,tmax,varname,input,      &
-                   xselect,yselect,zselect,tselect,output, &
-                   flag,nx,ny,dy,interp_method,            &
+  namelist /param/ imax,jmax,kmax,tmax,varname,input,   &
+                   xselect,yselect,zselect,tselect,     & 
+                   output,output_type,flag,nx,ny,dx,dy, &
+                   interp_x,interp_y,interp_method,     &
                    deflate_level,debug_level
   open(unit=10,file='namelist.ncedit',form='formatted',status='old',access='sequential')
   read(10,nml=param)
@@ -59,16 +61,83 @@ program ncedit
   if(debug_level.ge.100) print '(a18,i6)',  " zselect       = ", zselect
   if(debug_level.ge.100) print '(a18,i6)',  " tselect       = ", tselect
   if(debug_level.ge.100) print '(a18,a)',   " output        = ", trim(output)
+  if(debug_level.ge.100) print '(a18,a)',   " output_type   = ", trim(output_type)
   if(debug_level.ge.100) print '(a18,i6)',  " flag          = ", flag
   if(debug_level.ge.100) print '(a18,i6)',  "  nx           = ", nx
   if(debug_level.ge.100) print '(a18,i6)',  "  ny           = ", ny
+  if(debug_level.ge.100) print '(a18,f6.3)',"  dx           = ", dx
   if(debug_level.ge.100) print '(a18,f6.3)',"  dy           = ", dy
+  if(debug_level.ge.100) print '(a18,i6)',  " interp_x      = ", interp_x
+  if(debug_level.ge.100) print '(a18,i6)',  " interp_y      = ", interp_y
   if(debug_level.ge.100) print '(a18,a)',   " interp_method = ", trim(interp_method)
   if(debug_level.ge.100) print '(a18,i6)',  " deflate_level = ", deflate_level
   if(debug_level.ge.100) print '(a18,i6)',  " debug_level   = ", debug_level
   if(debug_level.ge.100) print '(a30)',     "----- values on namelist -----"
   if(debug_level.ge.100) print *, ""
 
+
+  ! check error
+  if(xselect.gt.imax) then
+     print *, " Error: xselect exceeds imax "
+     print *, "  xselect = ",xselect
+     print *, "  imax    = ",imax
+     print *, "Please reduce the value of xselect"
+     stop
+  end if
+  if(yselect.gt.jmax) then
+     print *, " Error: yselect exceeds jmax "
+     print *, "  yselect = ",yselect
+     print *, "  jmax    = ",jmax
+     print *, "Please reduce the value of yselect"
+     stop
+  end if
+  if(zselect.gt.kmax) then
+     print *, " Error: zselect exceeds kmax "
+     print *, "  zselect = ",zselect
+     print *, "  kmax    = ",kmax
+     print *, "Please reduce the value of zselect"
+     stop
+  end if
+  if(tselect.gt.tmax) then
+     print *, " Error: tselect exceeds tmax "
+     print *, "  tselect = ",tselect
+     print *, "  tmax    = ",tmax
+     print *, "Please reduce the value of tselect"
+     stop
+  end if
+
+  if( (flag.eq.1).or.(flag.eq.2).or.(flag.eq.3) ) then
+     if( (interp_x.ne.1).and.(nx.ne.imax) ) then
+        print *, " Error: nx .ne. imax "
+        print *, "  nx   = ",nx
+        print *, "  imax = ",imax
+        stop
+     end if
+  end if
+
+  if( flag.eq.1 ) then
+     if( (interp_y.ne.1).and.(ny.ne.jmax) ) then
+        print *, " Error: ny .ne. jmax "
+        print *, "  ny   = ",ny
+        print *, "  jmax = ",jmax
+        stop
+     end if
+  else if( flag.eq.2 ) then
+     if( (interp_y.ne.1).and.(ny.ne.kmax) ) then
+        print *, " Error: ny .ne. kmax "
+        print *, "  ny   = ",ny
+        print *, "  kmax = ",kmax
+        stop
+     end if
+  else if( flag.eq.3 ) then
+     if( (interp_y.ne.1).and.(ny.ne.tmax) ) then
+        print *, " Error: ny .ne. tmax "
+        print *, "  ny   = ",ny
+        print *, "  tmax = ",tmax
+        stop
+     end if
+  end if
+  
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Input 4D file
@@ -360,11 +429,6 @@ program ncedit
   if(flag.eq.1) then
      ! x-y array
      ! select one of the 2D array
-     ! ix array
-     ix(:) = x(:)
-     ! iy array
-     iy(:) = y(:)
-
      select case (varname)
      case ('thetae')
         print *, "The tmp array has already allocated"
@@ -373,6 +437,28 @@ program ncedit
      end select
      if(debug_level.ge.200) print *, " tmp(",xselect,",",yselect,")    = ", tmp(xselect,yselect)
      var_out(:,:) = tmp(:,:)
+
+     ! ix array
+     if(interp_x.eq.1) then
+        ! interpolate the stretched x-coordinate to constant dx coordinate
+        do k = 1, nx, 1
+           ix(k) = -real((nx/2)+(dx/2)) + k*dx
+        end do
+     else
+        ix(:) = x(:)
+     end if
+     if(debug_level.ge.200) print *, " ix(:)         = ", ix
+
+     ! iy array
+     if(interp_y.eq.1) then
+        ! interpolate the stretched y-coordinate to constant dy coordinate
+        do k = 1, ny, 1
+           iy(k) = -real((ny/2)+(dy/2)) + k*dy
+        end do
+     else
+        iy(:) = y(:)
+     end if
+     if(debug_level.ge.200) print *, " iy(:)         = ", iy
 
   else if(flag.eq.2) then
      ! x-z array
@@ -394,79 +480,105 @@ program ncedit
      if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
 
      ! ix array
-     ix(:) = x(:)
-     ! interpolate the stretched coordinate to constant dy coordinate
-     do k = 1, ny, 1
-        iy(k) = (k-1)*dy
-     end do
-     if(debug_level.ge.200) print *, " iy(:)         = ", iy
-
-     select case (interp_method)
-     case ('manual')
-        ! z coordinate points are manually selected as follows;
-        do j = 1, ny, 1
-           if (j.eq.1) then
-              ipoint = 1
-           else if (j.eq.2) then
-              ipoint = 5
-           else if (j.eq.3) then
-              ipoint = 10
-           else if (j.eq.4) then
-              ipoint = 15
-           else if (j.eq.5) then
-              ipoint = 19
-           else if (j.eq.6) then
-              ipoint = 22
-           else if (j.eq.7) then
-              ipoint = 24
-           else if (j.eq.8) then
-              ipoint = 26
-           else if (j.eq.9) then
-              ipoint = 28
-           else if (j.eq.10) then
-              ipoint = 29
-           else if (j.eq.11) then
-              ipoint = 31
-           else if (j.eq.12) then
-              ipoint = 32
-           else if (j.eq.13) then
-              ipoint = 34
-           else
-              ipoint = ipoint + 1
-           end if
-           var_out(:,j) = tmp(:,ipoint)
+     if(interp_x.eq.1) then
+        ! interpolate the stretched x-coordinate to constant dx coordinate
+        do k = 1, nx, 1
+           ix(k) = -real((nx/2)+(dx/2)) + k*dx
         end do
+     else
+        ix(:) = x(:)
+     end if
+     if(debug_level.ge.200) print *, " ix(:)         = ", ix
 
-     case ('linear')
-        ! z coordinate points are linearly interpolated by interp_linear
-        do i = 1, imax
-           CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
+     if(interp_y.eq.1) then
+        ! interpolate the stretched y-coordinate to constant dy coordinate
+        do k = 1, ny, 1
+           iy(k) = (k-1)*dy
         end do
+        if(debug_level.ge.200) print *, " iy(:)         = ", iy
 
-     case ('near')
-        ! z coordinate points are interpolated by nearest_interp_1d
-        do i = 1, imax
-           CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
-        end do
-
-     case ('stpk')
-        ! z coordinate points are linearly interpolated by STPK library
-        do j = 2, ny-1, 1
-!           call nearest_search_1d( z, iy(j), ipoint)
-           call interpo_search_1d( z, iy(j), ipoint)
-           if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
-           do i = 1, imax, 1
-              var_out(i,j) = tmp(i,ipoint)
+        select case (interp_method)
+        case ('manual')
+           ! z coordinate points are manually selected as follows;
+           do j = 1, ny, 1
+              if (j.eq.1) then
+                 ipoint = 1
+              else if (j.eq.2) then
+                 ipoint = 5
+              else if (j.eq.3) then
+                 ipoint = 10
+              else if (j.eq.4) then
+                 ipoint = 15
+              else if (j.eq.5) then
+                 ipoint = 19
+              else if (j.eq.6) then
+                 ipoint = 22
+              else if (j.eq.7) then
+                 ipoint = 24
+              else if (j.eq.8) then
+                 ipoint = 26
+              else if (j.eq.9) then
+                 ipoint = 28
+              else if (j.eq.10) then
+                 ipoint = 29
+              else if (j.eq.11) then
+                 ipoint = 31
+              else if (j.eq.12) then
+                 ipoint = 32
+              else if (j.eq.13) then
+                 ipoint = 34
+              else
+                 ipoint = ipoint + 1
+              end if
+              var_out(:,j) = tmp(:,ipoint)
            end do
-        end do
-
-     end select
+           
+        case ('linear')
+           ! z coordinate points are linearly interpolated by interp_linear
+           do i = 1, imax
+              CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
+           end do
+           
+        case ('near')
+           ! z coordinate points are interpolated by nearest_interp_1d
+           do i = 1, imax
+              CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
+           end do
+           
+        case ('stpk')
+           ! z coordinate points are linearly interpolated by STPK library
+           do j = 2, ny-1, 1
+              !CALL nearest_search_1d( z, iy(j), ipoint)
+              CALL interpo_search_1d( z, iy(j), ipoint)
+              if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
+              do i = 1, imax, 1
+                 var_out(i,j) = tmp(i,ipoint)
+              end do
+           end do
+        end select
+     else
+        ! use the values of the original z-coordinate
+        iy(:) = z(:)
+        ! use original data 
+        var_out(:,:) = tmp(:,:)
+     end if
      if(debug_level.ge.100) print *, " var_out(",xselect,",:) = ", var_out(xselect,:)
 
   else if (flag.eq.3) then
      ! x-t array
      if(debug_level.ge.100) print *, "x-t array"
-     ix(:) = x(:)
+
+     ! ix
+     if(interp_x.eq.1) then
+        ! interpolate the stretched x-coordinate to constant dx coordinate
+        do k = 1, nx, 1
+           ix(k) = -real((nx/2)+(dx/2)) + k*dx
+        end do
+     else
+        ix(:) = x(:)
+     end if
+
+     ! iy
      iy(:) = real(time_in(:)/dble(60.)) ! uint: [minute] -> [hour]
 !     iy(:) = time(:) ! uint: [second]
 
@@ -475,7 +587,6 @@ program ncedit
         if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
         do t = 1, tmax, 1
         do i = 1, imax, 1
-!              var_out(i,t) = var_in(i,yselect,t,zselect)
            var_out(i,t) = var_in(i,1,t,1)
            var_out(i,t) = var_out(i,t)*real(10.) ! unit: [cm] -> [mm]
         end do
@@ -489,9 +600,7 @@ program ncedit
         end do
         if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
         end do
-
      end select
-
   end if
   if(debug_level.ge.100) print *, ""
 
@@ -500,7 +609,14 @@ program ncedit
   ! Output 2D file
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! create the file
-  call check( nf90_create(output, nf90_netcdf4, ncid) )
+  select case (output_type)
+  case ('nc3')
+     call check( nf90_create(output, nf90_classic_model, ncid) )
+  case ('nc3_64bit')
+     call check( nf90_create(output, nf90_64bit_offset, ncid) )
+  case ('nc4')
+     call check( nf90_create(output, nf90_netcdf4, ncid) )
+  end select
   if(debug_level.ge.100) print *, "Success: create the 2D output file"
 
   ! define the dimensions
@@ -517,8 +633,13 @@ program ncedit
   ! define the netCDF variables for the 2D data with compressed format(netcdf4).
   dimids = (/ xdimid, ydimid /)
   chunks = (/ nx, ny /)
-  call check( nf90_def_var(ncid, "z", NF90_REAL, dimids, varid, &
-       chunksizes = chunks, shuffle = .TRUE., deflate_level = deflate_level) )
+  select case (output_type)
+  case ('nc3','nc3_64bit')
+     call check( nf90_def_var(ncid, "z", NF90_REAL, dimids, varid) )
+  case ('nc4')
+     call check( nf90_def_var(ncid, "z", NF90_REAL, dimids, varid, &
+          chunksizes = chunks, shuffle = .TRUE., deflate_level = deflate_level) )
+  end select
   if(debug_level.ge.100) print *, "  Success: define the netcdf variables"
 
   ! end define mode
@@ -529,7 +650,6 @@ program ncedit
   call check( nf90_put_var(ncid, xvarid, ix) )
   call check( nf90_put_var(ncid, yvarid, iy) )
   if(debug_level.ge.100) print *, "Success: write the coordinate variable data"
-
 
   ! write the pretend data
   ostart = (/ 1, 1 /)
@@ -581,7 +701,7 @@ contains
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! subroutine of interp_linear
   !  original program coded by Takashi Unuma, Kyoto Univ.
-  !  last modified: 2014/06/20
+  !  last modified: 2014/06/29
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   subroutine interp_linear( znum, iznum, z_in, z_out, data_in, data_out, debug_level )
     implicit none
@@ -591,16 +711,18 @@ contains
     real :: tmp
     integer :: debug_level
     do i = 1, iznum
-!       if(i.eq.1) then
-!          data_out(i) = data_in(i)
-!       else
+       if(i.eq.1) then
+          data_out(i) = data_in(1)
+       else if(i.eq.iznum) then
+          data_out(i) = data_in(znum)
+       else
           ! 1. 内挿点の１つ前と後の座標及び値を取得: find4point
           CALL find4point( znum, z_in, z_out(i), ipoint, debug_level )
           ! 2. 用意した４点を基に tmp を計算
           tmp = (data_in(ipoint+1)-data_in(ipoint))/(z_in(ipoint+1)-z_in(ipoint))
           ! 3. 内挿点 data_out(i) を計算
           data_out(i) = (tmp*z_out(i)) + data_in(ipoint) - (tmp*z_in(ipoint))
-!       end if
+       end if
        if(debug_level.ge.300) print *, " i,z_out,data_out = ", i, z_out(i), data_out(i)
     end do
   end subroutine interp_linear
