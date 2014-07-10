@@ -1,7 +1,7 @@
 !
 ! Program of ncedit_status.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/06/21
+! Last modified: 2014/07/10
 !
 
 program ncedit_stats
@@ -82,7 +82,7 @@ program ncedit_stats
   if(debug_level.ge.100) print *, ""
 
 
-  ! x-t array
+  ! t array
   if(debug_level.ge.100) print *, "output time as time_out array"
   if(debug_level.ge.100) print *, " unit: [second] -> [hour]"
   do t = 1, tmax, 1
@@ -217,6 +217,18 @@ program ncedit_stats
         end if
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
+
+  ! case ('train')
+  !    if(debug_level.ge.100) print *, "output by time"
+  !    if(debug_level.ge.100) print *, " unit: [kg]"
+  !    do t = 1, tmax, 1
+  !       if(t.eq.1) then
+  !          var_out(t) = var_in(1)
+  !       else
+  !          var_out(t) = var_in(t) - var_in(t-1)
+  !       end if
+  !       if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
+  !    end do
 
   case default
      do t = 1, tmax, 1
