@@ -1,58 +1,67 @@
 &param
  imax               = 256
-! jmax		    = 256
- jmax		    = 3
+ jmax		    = 256
+! jmax		    = 3
  kmax		    = 64
-! tmax		    = 37
- tmax		    = 361
+ tmax		    = 37
+! tmax		    = 361
 ! varname	    = "water"
 ! varname	    = "dbz"
 ! varname	    = "buoyancy"
 ! varname	    = "uinterp"
 ! varname	    = "vinterp"
-! varname	    = "winterp"
- varname	    = "thetae"
+ varname	    = "winterp"
+! varname	    = "thetae"
 ! varname	    = "rain"
+! varname	    = "maxrain"
 ! varname	    = "cref"
 ! varname	    = "cpc"
  input		    = "cm1out.nc"
- xselect	    = 128
+! xselect	    = 128
+ xselect	    = 0
 ! yselect	    = 128
- yselect	    = 2
+! yselect	    = 2
+ yselect	    = 0
  zselect	    = 1
 ! zselect	    = 20
-! tselect	    = 2
- tselect	    = 180
+ tselect	    = 18
+! tselect	    = 180
 ! output	    	    = "water.nc4"
-! output	    	    = "buoyancy.nc4"
+ output	    	    = "buoyancy.nc4"
 ! output	    	    = "uinterp_180.nc4"
 ! output	    	    = "vinterp_180.nc4"
 ! output	    	    = "winterp_180.nc4"
 ! output		    = "dbz_180.nc4"
- output		    = "thetae_180.nc4"
+! output		    = "thetae_180.nc4"
 ! output		    = "rain.nc4"
 ! output		    = "cref.nc4"
 ! output		    = "cpc.nc4"
+! output		    = "rain.txt"
 ! output_type	    = "nc3"
 ! output_type	    = "nc3_64bit"
  output_type	    = "nc4"
 ! flag		    = 1     ! x-y
- flag		    = 2     ! x-z
+! flag		    = 2     ! x-z
 ! flag		    = 3     ! x-t
- nx		    = 256   ! x-y, x-z in flag = 1 and 2
+! flag		    = 4     ! time series
+ flag		    = 5     ! cross-section
+ nx		    = 256   ! x-y, x-z in flag = 1, 2 or 5
 ! ny		    = 256   ! x-y in flag = 1
- ny		    = 64    ! x-z in flag = 2 if the use of original coordinate
+! ny		    = 64    ! x-z in flag = 2 if the use of original coordinate
 ! ny		    = 41    ! x-z in flag = 2 if dy = 0.500
-! ny		    = 81    ! x-z in flag = 2 if dy = 0.250
+ ny		    = 81    ! x-z in flag = 2 or 5 if dy = 0.250
 ! ny		    = 61    ! x-t in flag = 3
- dx	            = 1.000 ! delta x, which will be interpolated in flag = 2
- dy	            = 0.500 ! delta y, which will be interpolated in flag = 2 using the option of interp_method
-! dy	            = 0.250 ! delta y, which will be interpolated in flag = 2 using the option of interp_method
+! dx	            = 1.000 ! delta x, which will be interpolated in flag = 2 and 5 
+ dx	            = 0.500 ! delta x, which will be interpolated in flag = 2 and 5
+! dy	            = 0.500 ! delta y, which will be interpolated in flag = 2 using the option of interp_method
+ dy	            = 0.250 ! delta y, which will be interpolated in flag = 2 using the option of interp_method
+! angle		    = 0.0   ! along x-coordinate
+! angle		    = 90.0  ! along y-coordinate
+ angle		    = 45.0  ! 45 deg
 ! interp_x	    = 1
  interp_x	    = 0
-! interp_y	    = 1
- interp_y	    = 0
-! interp_method	    = 'manual'
+ interp_y	    = 1
+! interp_y	    = 0
  interp_method	    = 'linear'
 ! interp_method	    = 'near'
 ! interp_method	    = 'stpk'

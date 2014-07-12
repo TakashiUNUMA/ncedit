@@ -1,7 +1,7 @@
 !
 ! Program of ncedit.f90
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/07/10
+! Last modified: 2014/07/13
 !
 
 program ncedit
@@ -13,7 +13,7 @@ program ncedit
   ! I/O values and arrays
   integer :: flag, xselect, yselect, zselect, tselect
   integer :: interp_x, interp_y
-  real :: dx,dy
+  real :: dx, dy, angle
   real, dimension(:),       allocatable :: x, y, z, time_in
   real, dimension(:,:,:,:), allocatable :: var_in
   real, dimension(:),       allocatable :: ix, iy
@@ -28,8 +28,11 @@ program ncedit
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
   integer, dimension(2) :: ostart, ocount, dimids, chunks
   integer, dimension(4) :: istart, icount
+  integer, dimension(2) :: ipoints
   real :: tmp0
-  real, dimension(:,:),   allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
+  real, dimension(:),       allocatable :: yy
+  real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
+  real, parameter :: pi = 3.14159265
 
   ! undefined value
 !  real :: nan = (/ Z'7fffffff' /) ! not work with gfortran
@@ -40,10 +43,11 @@ program ncedit
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Input parameters from namelist
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
-  namelist /param/ imax,jmax,kmax,tmax,varname,input,   &
-                   xselect,yselect,zselect,tselect,     & 
-                   output,output_type,flag,nx,ny,dx,dy, &
-                   interp_x,interp_y,interp_method,     &
+  namelist /param/ imax,jmax,kmax,tmax,varname,input, &
+                   xselect,yselect,zselect,tselect,   & 
+                   output,output_type,flag,           &
+                   nx,ny,dx,dy,angle,                 &
+                   interp_x,interp_y,interp_method,   &
                    deflate_level,debug_level
   open(unit=10,file='namelist.ncedit',form='formatted',status='old',access='sequential')
   read(10,nml=param)
@@ -67,6 +71,7 @@ program ncedit
   if(debug_level.ge.100) print '(a18,i6)',  "  ny           = ", ny
   if(debug_level.ge.100) print '(a18,f6.3)',"  dx           = ", dx
   if(debug_level.ge.100) print '(a18,f6.3)',"  dy           = ", dy
+  if(debug_level.ge.100) print '(a18,f6.2)',"  angle        = ", angle
   if(debug_level.ge.100) print '(a18,i6)',  " interp_x      = ", interp_x
   if(debug_level.ge.100) print '(a18,i6)',  " interp_y      = ", interp_y
   if(debug_level.ge.100) print '(a18,a)',   " interp_method = ", trim(interp_method)
@@ -200,22 +205,24 @@ program ncedit
   ! allocate arrays
   select case (flag)
   case (1)
+     ! x-y
      allocate( var_in(imax,jmax,1,1) )
      istart = (/ 1, 1, zselect, tselect /)
      icount = (/ imax, jmax, 1, 1 /)
-     allocate( tmp(imax,jmax) ) ! allocate x-y array
-     allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax) ) ! allocate x-y arrays
+     allocate( tmp(imax,jmax) )
+     allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax) )
      tmp(:,:) = nan
      tmp1(:,:) = nan
      tmp2(:,:) = nan
      tmp3(:,:) = nan
   case (2)
+     ! x-z
      allocate( var_in(imax,1,kmax,1) )
      istart = (/ 1, yselect, 1, tselect /)
      icount = (/ imax, 1, kmax, 1 /)
-     allocate( tmp(imax,kmax) ) ! allocate x-z arrays
-     allocate( tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) ) ! allocate x-z arrays
-     allocate( tmp4(imax,kmax),tmp5(imax,kmax) )                 ! allocate x-z arrays
+     allocate( tmp(imax,kmax) )
+     allocate( tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) )
+     allocate( tmp4(imax,kmax),tmp5(imax,kmax) )
      tmp(:,:) = nan
      tmp1(:,:) = nan
      tmp2(:,:) = nan
@@ -223,19 +230,26 @@ program ncedit
      tmp4(:,:) = nan
      tmp5(:,:) = nan
   case (3)
+     ! x-t
      allocate( var_in(imax,1,tmax,1) )
      istart = (/ 1, yselect, 1, 1 /)
      icount = (/ imax, 1, tmax, 1 /)
-     allocate( tmp(imax,tmax) )                                  ! allocate x-t array
+     allocate( tmp(imax,tmax) )
      tmp(:,:) = nan
   case (4)
+     ! time series of a value
      allocate( var_in(imax,jmax,tmax,1) )
      istart = (/ 1, 1, 1, 1 /)
      icount = (/ imax, jmax, tmax, 1 /)
-     allocate( tmp(tmax,1) )                                     ! allocate t array
+     allocate( tmp(tmax,1) )
      tmp(:,1) = nan
-!  case default
-!     allocate( var_in(imax,jmax,kmax,tmax) )
+  case (5)
+     ! arbitrary cross-section specifying (xselect,yselect) and angle
+     allocate( var_in(imax,jmax,kmax,1) )
+     istart = (/ 1, 1, 1, tselect /)
+     icount = (/ imax, jmax, kmax, 1 /)
+     allocate( tmp(imax,kmax) )
+     tmp(:,:) = nan
   end select
   var_in(:,:,:,:) = nan
 
@@ -245,6 +259,7 @@ program ncedit
   select case (varname)
   case ('water')
      ! for all water (qc+qr+qi+qc+qg) on the microphysics processes
+     ! *** this section work with flag = 2 ***
      ! --- read qc
      call check( nf90_inq_varid(ncid, "qc", varid) )
      if(debug_level.ge.100) print *, " Success: inquire the varid"
@@ -254,7 +269,7 @@ program ncedit
      if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -271,7 +286,7 @@ program ncedit
      if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -288,7 +303,7 @@ program ncedit
      if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -305,7 +320,7 @@ program ncedit
      if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -322,7 +337,7 @@ program ncedit
      if(debug_level.ge.100) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -333,7 +348,7 @@ program ncedit
      ! --- calculate water = qc + qr + qi + qs + qg [kg/kg]
      select case (flag)
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -344,6 +359,7 @@ program ncedit
 
   case ('thetae')
      ! equivalent potential temperature [K]
+     ! *** this section work with flag = 1 or 2 ***
      ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -353,7 +369,7 @@ program ncedit
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (1)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,j)
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -361,7 +377,7 @@ program ncedit
         end do
         end do
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -378,7 +394,7 @@ program ncedit
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (1)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,j)
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -386,7 +402,7 @@ program ncedit
         end do
         end do
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -403,14 +419,14 @@ program ncedit
      if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (1)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,j)
         do j = 1, jmax, 1
         do i = 1, imax, 1
            tmp3(i,j) = var_in(i,j,1,1)
         end do
         end do
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,j,tmp0)
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -419,14 +435,14 @@ program ncedit
         end do
         end do
      case (2)
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k)
         do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp3(i,k) = var_in(i,1,k,1)
         end do
         end do
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,k,tmp0)
         do k = 1, kmax, 1
         do i = 1, imax, 1
@@ -438,6 +454,7 @@ program ncedit
 
   case ('maxrain')
      ! maximum rain rate [mm h^-1]
+     ! *** this section work with flag = 4 ***
      ! --- read rain [cm]
      call check( nf90_inq_varid(ncid, "rain", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -449,7 +466,7 @@ program ncedit
      case (4)
         ! for t = 1
         tmp(1,1) = 0.0
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,j,t,tmp0)
         ! for t >= 2
         do t = 2, tmax, 1
@@ -464,6 +481,7 @@ program ncedit
 
   case default
      ! the others
+     ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
      call check( nf90_inq_varid(ncid, varname, varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
@@ -520,7 +538,8 @@ program ncedit
      var_out(:,:) = nan
 
      if(flag.eq.1) then
-        ! x-y array
+        ! x-y
+        if(debug_level.ge.100) print *, "x-y array"
         ! select one of the 2D array
         select case (varname)
         case ('thetae')
@@ -530,7 +549,7 @@ program ncedit
         end select
         if(debug_level.ge.200) print *, " tmp(",xselect,",",yselect,")    = ", tmp(xselect,yselect)
         var_out(:,:) = tmp(:,:)
-        
+
         ! ix array
         if(interp_x.eq.1) then
            ! interpolate the stretched x-coordinate to constant dx coordinate
@@ -541,7 +560,7 @@ program ncedit
            ix(:) = x(:)
         end if
         if(debug_level.ge.200) print *, " ix(:)         = ", ix
-        
+
         ! iy array
         if(interp_y.eq.1) then
            ! interpolate the stretched y-coordinate to constant dy coordinate
@@ -554,7 +573,8 @@ program ncedit
         if(debug_level.ge.200) print *, " iy(:)         = ", iy
         
      else if(flag.eq.2) then
-        ! x-z array
+        ! x-z
+        if(debug_level.ge.100) print *, "x-z array"
         ! select one of the 2D array
         select case (varname)
         case ('water')
@@ -582,7 +602,8 @@ program ncedit
            ix(:) = x(:)
         end if
         if(debug_level.ge.200) print *, " ix(:)         = ", ix
-        
+
+        ! iy array
         if(interp_y.eq.1) then
            ! interpolate the stretched y-coordinate to constant dy coordinate
            do k = 1, ny, 1
@@ -591,53 +612,16 @@ program ncedit
            if(debug_level.ge.200) print *, " iy(:)         = ", iy
            
            select case (interp_method)
-           case ('manual')
-              ! z coordinate points are manually selected as follows;
-              do j = 1, ny, 1
-                 if (j.eq.1) then
-                    ipoint = 1
-                 else if (j.eq.2) then
-                    ipoint = 5
-                 else if (j.eq.3) then
-                    ipoint = 10
-                 else if (j.eq.4) then
-                    ipoint = 15
-                 else if (j.eq.5) then
-                    ipoint = 19
-                 else if (j.eq.6) then
-                    ipoint = 22
-                 else if (j.eq.7) then
-                    ipoint = 24
-                 else if (j.eq.8) then
-                    ipoint = 26
-                 else if (j.eq.9) then
-                    ipoint = 28
-                 else if (j.eq.10) then
-                    ipoint = 29
-                 else if (j.eq.11) then
-                    ipoint = 31
-                 else if (j.eq.12) then
-                    ipoint = 32
-                 else if (j.eq.13) then
-                    ipoint = 34
-                 else
-                    ipoint = ipoint + 1
-                 end if
-                 var_out(:,j) = tmp(:,ipoint)
-              end do
-              
            case ('linear')
               ! z coordinate points are linearly interpolated by interp_linear
               do i = 1, imax
                  CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
               end do
-              
            case ('near')
               ! z coordinate points are interpolated by nearest_interp_1d
               do i = 1, imax
                  CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
               end do
-              
            case ('stpk')
               ! z coordinate points are linearly interpolated by STPK library
               do j = 2, ny-1, 1
@@ -660,7 +644,6 @@ program ncedit
      else if (flag.eq.3) then
         ! x-t array
         if(debug_level.ge.100) print *, "x-t array"
-        
         ! ix
         if(interp_x.eq.1) then
            ! interpolate the stretched x-coordinate to constant dx coordinate
@@ -670,26 +653,24 @@ program ncedit
         else
            ix(:) = x(:)
         end if
-        
+
         ! iy
         iy(:) = real(time_in(:)/dble(60.)) ! uint: [minute] -> [hour]
         !iy(:) = time(:) ! uint: [second]
-        
+
         select case (varname)
         case ('rain')
            if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
-              var_out(i,t) = var_in(i,1,t,1)
-              var_out(i,t) = var_out(i,t)*real(10.) ! unit: [cm] -> [mm]
+              var_out(i,t) = var_in(i,1,t,1)*real(10.) ! unit: [cm] -> [mm]
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-           
         case default
-!$omp parallel do default(shared)   &
+!$omp parallel do default(shared) &
 !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
@@ -698,6 +679,105 @@ program ncedit
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
         end select
+
+     else if(flag.eq.5) then
+        ! arvitrary cross-section
+        if(debug_level.ge.100) print *, "arvitrary cross-section"
+        ! ix and yy array
+        ! create the coordinate that the user specified point and angle
+        if( (xselect.lt.x(1)).or.(xselect.gt.x(imax)) ) then
+           print *, "ERROR: xselect must be specified between x(1) and x(imax)"
+           stop
+        end if
+        if( (yselect.lt.y(1)).or.(yselect.gt.y(jmax)) ) then
+           print *, "ERROR: yselect must be specified between y(1) and y(imax)"
+           stop
+        end if
+
+        tmp0 = abs((x(imax)*cos(angle*(pi/180.)))*2)/real(imax)
+        if(debug_level.ge.200) print *, " dix           = ", tmp0
+        do i = 1, imax, 1
+           ix(i) = xselect + x(1)*cos(angle*(pi/180.)) + (i-1)*tmp0
+        end do
+        if(debug_level.ge.200) print *, " ix(:)         = ", ix
+
+        allocate( yy(jmax) )
+        tmp0 = abs((y(jmax)*sin(angle*(pi/180.)))*2)/real(jmax)
+        if(debug_level.ge.200) print *, " dyy           = ", tmp0
+        do i = 1, jmax, 1
+           yy(i) = yselect + y(1)*sin(angle*(pi/180.)) + (i-1)*tmp0
+        end do
+        if(debug_level.ge.200) print *, " yy(:)         = ", yy
+
+        do k = 1, kmax, 1
+        do i = 1, nx, 1
+           CALL find4point( imax, x, ix(i), ipoints(1), debug_level )
+           CALL find4point( jmax, y, yy(i), ipoints(2), debug_level )
+           if(debug_level.ge.300) print *, " ipoints               = ", ipoints(1), ipoints(2)
+           if(debug_level.ge.300) print *, " var_in                = ", var_in(ipoints(1),ipoints(2),k,1)
+           tmp(i,k) = ( var_in(ipoints(1)+1,ipoints(2)+1,k,1) + var_in(ipoints(1)+1,ipoints(2),k,1) + &
+                        var_in(ipoints(1)  ,ipoints(2)+1,k,1) + var_in(ipoints(1)  ,ipoints(2),k,1) )/real(4.)
+           if(debug_level.ge.300) print *, " tmp(",i,",",k,")      = ", tmp(i,k)
+        end do
+        if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
+        end do
+
+        ! iy array
+        if(interp_y.eq.1) then
+           ! interpolate the stretched y-coordinate to constant dy coordinate
+           do k = 1, ny, 1
+              iy(k) = (k-1)*dy
+           end do
+           if(debug_level.ge.200) print *, " iy(:)         = ", iy
+           
+           select case (interp_method)
+           case ('linear')
+              ! z coordinate points are linearly interpolated by interp_linear
+              do i = 1, imax
+                 CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
+              end do
+           case ('near')
+              ! z coordinate points are interpolated by nearest_interp_1d
+              do i = 1, imax
+                 CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
+              end do
+           case ('stpk')
+              ! z coordinate points are linearly interpolated by STPK library
+              do j = 2, ny-1, 1
+                 !CALL nearest_search_1d( z, iy(j), ipoint)
+                 CALL interpo_search_1d( z, iy(j), ipoint)
+                 if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
+                 do i = 1, imax, 1
+                    var_out(i,j) = tmp(i,ipoint)
+                 end do
+              end do
+           end select
+        else
+           ! use the values of the original z-coordinate
+           iy(:) = z(:)
+           ! use original data 
+           var_out(:,:) = tmp(:,:)
+        end if
+        if(debug_level.ge.100) print *, " var_out(",nx/2,",:) = ", var_out(nx/2,:)
+
+!        if(debug_level.ge.100) stop 
+
+        ! select case (varname)
+        ! case ('water')
+        !    print *, "The tmp array has already allocated"
+        !    if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
+        !    tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+        ! case ('qc','qr','qi','qs','qg')
+        !    tmp(:,:) = var_in(:,1,:,1)
+        !    if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
+        !    tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+        ! case ('thetae')
+        !    print *, "The tmp array has already allocated"
+        ! case default
+        !    tmp(:,:) = var_in(:,1,:,1)
+        ! end select
+        ! if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
+        
      end if
      if(debug_level.ge.100) print *, ""
      
@@ -768,6 +848,8 @@ program ncedit
         deallocate( x,y,z,time_in,var_in,tmp,tmp1,tmp2,tmp3,tmp4,tmp5 )
      case (3)
         deallocate( x,y,z,time_in,var_in,tmp )
+     case (5)
+        deallocate( x,y,z,time_in,var_in,tmp,yy )
      end select
      if(debug_level.ge.100) print *, "Success: deallocate the allocated arrays"
      if(debug_level.ge.100) print *, ""
