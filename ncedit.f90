@@ -32,6 +32,7 @@ program ncedit
   real :: tmp0
   real, dimension(:),       allocatable :: yy
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
+  real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
   real, parameter :: pi = 3.14159265
 
   ! undefined value
@@ -248,6 +249,12 @@ program ncedit
      allocate( var_in(imax,jmax,kmax,1) )
      istart = (/ 1, 1, 1, tselect /)
      icount = (/ imax, jmax, kmax, 1 /)
+     allocate( tmpi(imax,jmax,kmax) )
+     allocate( tmpi1(imax,jmax,kmax),tmpi2(imax,jmax,kmax),tmpi3(imax,jmax,kmax) )
+     tmpi(:,:,:) = nan
+     tmpi1(:,:,:) = nan
+     tmpi2(:,:,:) = nan
+     tmpi3(:,:,:) = nan
      allocate( tmp(imax,kmax) )
      tmp(:,:) = nan
   end select
@@ -359,7 +366,7 @@ program ncedit
 
   case ('thetae')
      ! equivalent potential temperature [K]
-     ! *** this section work with flag = 1 or 2 ***
+     ! *** this section work with flag = 1, 2 or 5 ***
      ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -382,6 +389,16 @@ program ncedit
         do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp1(i,k) = var_in(i,1,k,1)
+        end do
+        end do
+     case (5)
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi1(i,j,k) = var_in(i,j,k,1)
+        end do
         end do
         end do
      end select
@@ -409,6 +426,16 @@ program ncedit
            tmp2(i,k) = var_in(i,1,k,1)
         end do
         end do
+     case (5)
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi2(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
      end select
      ! --- read qv [kg/kg]
      call check( nf90_inq_varid(ncid, "qv", varid) )
@@ -420,34 +447,34 @@ program ncedit
      select case (flag)
      case (1)
 !$omp parallel do default(shared) &
-!$omp private(i,j)
-        do j = 1, jmax, 1
-        do i = 1, imax, 1
-           tmp3(i,j) = var_in(i,j,1,1)
-        end do
-        end do
-!$omp parallel do default(shared) &
 !$omp private(i,j,tmp0)
         do j = 1, jmax, 1
         do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1)
            tmp0 = thetaP_2_T( tmp2(i,j), tmp1(i,j) )
            tmp(i,j) = thetae_Bolton( tmp0, tmp3(i,j), tmp1(i,j) )
         end do
         end do
      case (2)
 !$omp parallel do default(shared) &
-!$omp private(i,k)
-        do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp3(i,k) = var_in(i,1,k,1)
-        end do
-        end do
-!$omp parallel do default(shared) &
 !$omp private(i,k,tmp0)
         do k = 1, kmax, 1
         do i = 1, imax, 1
+           tmp3(i,k) = var_in(i,1,k,1)
            tmp0 = thetaP_2_T( tmp2(i,k), tmp1(i,k) )
            tmp(i,k) = thetae_Bolton( tmp0, tmp3(i,k), tmp1(i,k) )
+        end do
+        end do
+     case (5)
+!$omp parallel do default(shared) &
+!$omp private(i,j,k,tmp0)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi3(i,j,k) = var_in(i,j,k,1)
+           tmp0 = thetaP_2_T( tmpi2(i,j,k), tmpi1(i,j,k) )
+           tmpi(i,j,k) = thetae_Bolton( tmp0, tmpi3(i,j,k), tmpi1(i,j,k) )
+        end do
         end do
         end do
      end select
@@ -709,18 +736,40 @@ program ncedit
         end do
         if(debug_level.ge.200) print *, " yy(:)         = ", yy
 
-        do k = 1, kmax, 1
-        do i = 1, nx, 1
-           CALL find4point( imax, x, ix(i), ipoints(1), debug_level )
-           CALL find4point( jmax, y, yy(i), ipoints(2), debug_level )
-           if(debug_level.ge.300) print *, " ipoints               = ", ipoints(1), ipoints(2)
-           if(debug_level.ge.300) print *, " var_in                = ", var_in(ipoints(1),ipoints(2),k,1)
-           tmp(i,k) = ( var_in(ipoints(1)+1,ipoints(2)+1,k,1) + var_in(ipoints(1)+1,ipoints(2),k,1) + &
-                        var_in(ipoints(1)  ,ipoints(2)+1,k,1) + var_in(ipoints(1)  ,ipoints(2),k,1) )/real(4.)
-           if(debug_level.ge.300) print *, " tmp(",i,",",k,")      = ", tmp(i,k)
-        end do
-        if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
-        end do
+        select case (varname)
+        case ('thetae')
+!$omp parallel do default(shared) &
+!$omp private(i,k,ipoints)
+           do k = 1, kmax, 1
+           do i = 1, nx, 1
+              CALL find4point( imax, x, ix(i), ipoints(1), debug_level )
+              CALL find4point( jmax, y, yy(i), ipoints(2), debug_level )
+              if(debug_level.ge.300) print *, " ipoints               = ", ipoints(1), ipoints(2)
+              if(debug_level.ge.300) print *, " tmpi                  = ", tmpi(ipoints(1),ipoints(2),k)
+              tmp(i,k) = ( tmpi(ipoints(1)+1,ipoints(2)+1,k) + tmpi(ipoints(1)+1,ipoints(2),k) + &
+                           tmpi(ipoints(1)  ,ipoints(2)+1,k) + tmpi(ipoints(1)  ,ipoints(2),k) )/real(4.)
+              if(debug_level.ge.300) print *, " tmp(",i,",",k,")      = ", tmp(i,k)
+           end do
+           if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
+           end do
+
+        case default
+!$omp parallel do default(shared) &
+!$omp private(i,k,ipoints)
+           do k = 1, kmax, 1
+           do i = 1, nx, 1
+              CALL find4point( imax, x, ix(i), ipoints(1), debug_level )
+              CALL find4point( jmax, y, yy(i), ipoints(2), debug_level )
+              if(debug_level.ge.300) print *, " ipoints               = ", ipoints(1), ipoints(2)
+              if(debug_level.ge.300) print *, " var_in                = ", var_in(ipoints(1),ipoints(2),k,1)
+              tmp(i,k) = ( var_in(ipoints(1)+1,ipoints(2)+1,k,1) + var_in(ipoints(1)+1,ipoints(2),k,1) + &
+                           var_in(ipoints(1)  ,ipoints(2)+1,k,1) + var_in(ipoints(1)  ,ipoints(2),k,1) )/real(4.)
+              if(debug_level.ge.300) print *, " tmp(",i,",",k,")      = ", tmp(i,k)
+           end do
+           if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
+           end do
+
+        end select
 
         ! iy array
         if(interp_y.eq.1) then
