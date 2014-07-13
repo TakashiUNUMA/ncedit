@@ -479,6 +479,50 @@ program ncedit
         end do
      end select
 
+  case ('rws')
+     ! wind speed that projected on the specified vertical cross section [m/s]
+     ! *** this section work with flag = 5 ***
+     ! --- read uinterp [m/s]
+     call check( nf90_inq_varid(ncid, "uinterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (5)
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi1(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+     end select
+     ! --- read vinterp [m/s]
+     call check( nf90_inq_varid(ncid, "vinterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (5)
+!$omp parallel do default(shared) &
+!$omp private(i,j,k,tmp0)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi2(i,j,k) = var_in(i,j,k,1)
+           tmp0 = atan2(tmpi1(i,j,k),tmpi2(i,j,k))
+           tmpi(i,j,k) = sqrt(tmpi1(i,j,k)**2 + tmpi2(i,j,k)**2)*cos(tmp0-(angle*(pi/180.)))
+        end do
+        end do
+        end do
+     end select
+
   case ('maxrain')
      ! maximum rain rate [mm h^-1]
      ! *** this section work with flag = 4 ***
@@ -737,7 +781,7 @@ program ncedit
         if(debug_level.ge.200) print *, " yy(:)         = ", yy
 
         select case (varname)
-        case ('thetae')
+        case ('thetae','rws')
 !$omp parallel do default(shared) &
 !$omp private(i,k,ipoints)
            do k = 1, kmax, 1
