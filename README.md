@@ -81,11 +81,11 @@ ncedit, ncedit_stats
  flag          = 2        ( x-z 断面 )
  yselect       = 2        ( y 軸の 2 grid 目 )
  tselect       = 240      ( 計算開始から 240 ステップ目 )
- nx	       = 256      ( 出力データの x 軸 grid 数 )
- ny	       = 41       ( 出力データの y 軸 grid 数 )
- dx	       = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
- dy	       = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
- interp_x      = 1        ( x 軸座標の内挿)
+ nx            = 256      ( 出力データの x 軸 grid 数 )
+ ny            = 41       ( 出力データの y 軸 grid 数 )
+ dx            = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ dy            = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ interp_x      = 1        ( x 軸座標の内挿 )
  interp_y      = 1        ( y 軸座標の内挿 )
  interp_method = 'linear' ( y 軸の内挿方法 )
 ```
@@ -100,6 +100,21 @@ ncedit, ncedit_stats
  interp_x      = 0        ( x 軸座標をそのまま出力 )
  interp_y      = 0        ( y 軸座標をそのまま出力 )
 ```
+
+例4: 4 次元データを x-z 任意断面として出力する場合
+```
+ flag          = 5        ( x-z 任意断面 )
+ xselect       = 0        ( 投影水平軸の中心座標位置 )
+ yselect       = 0        ( 投影水平軸の中心座標位置 )
+ tselect       = 240      ( 計算開始から 240 ステップ目 )
+ nx            = 256      ( 出力データの x 軸 grid 数 )
+ ny            = 41       ( 出力データの y 軸 grid 数 )
+ dy            = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ angle         = 45.0     ( 投影面の x 軸からの角度 )
+ interp_y      = 1        ( y 軸座標の内挿 )
+ interp_method = 'linear' ( y 軸の内挿方法 )
+```
+
 
 また、ncedit.f90 は、
 
@@ -142,7 +157,7 @@ ncedit, ncedit_stats
 
 # TODO
 - x-y 断面の拡張
-
+- 一時配列確保時の高速化
 
 # その他
 何か質問・提案等ございましたら、 kijima.m.u (at) gmail.com へどうぞ。
