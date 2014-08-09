@@ -116,14 +116,13 @@ ncedit, ncedit_stats
 ```
 
 
-また、ncedit.f90 は、
+ncedit.f90 は、
 
 - 多次元 -> 2 次元出力
 - 出力時の単位変換
 - 元データに無い変数の計算
 
-等のため、出来るだけ単純化しているつもりです。
-今後はこの単純な構造を保ちつつ複雑にならないように設計していくつもりです。
+等のため、出来るだけ単純化しているつもりです(が、既に複雑になってしまいました)。
 
 
 ## 出力データの確認 (ncdump, ncview 等)
@@ -146,8 +145,9 @@ ncedit, ncedit_stats
 
 
 # 謝辞
-[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
-開発者の 辻野 智紀 氏に感謝申し上げます。
+辻野 智紀 氏が開発している、[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
+Gorge Bryan 氏の CAPE 計算サブルーチン (getcape.f) を使用させていただきました。
+関係者各位に感謝申し上げます。
 
 
 # 参考文献・URL
@@ -159,5 +159,6 @@ ncedit, ncedit_stats
 - x-y 断面の拡張
 - 一時配列確保時の高速化
 
+
 # その他
-何か質問・提案等ございましたら、 kijima.m.u (at) gmail.com へどうぞ。
+何か質問・提案等ございましたら、 kijima.m.u __(at)__ gmail.com へどうぞ。
