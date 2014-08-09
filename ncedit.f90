@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/08/09
+! last modified: 2014/08/10
 !
 
 program ncedit
@@ -31,7 +31,7 @@ program ncedit
   integer, dimension(4) :: istart, icount
   integer, dimension(2) :: ipoints
   real :: tmp0
-  real :: gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz
+  real :: gbcape,gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz
   real, dimension(:),       allocatable :: yy
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
@@ -507,8 +507,9 @@ program ncedit
         end do
      end select
 
-  case ('cape')
+  case ('cape','cin','lfc')
      ! convective available potential energy [J kg-1]
+     ! convective inhibition [J kg-1]
      ! *** this section work with flag = 3 ***
      if(flag.ne.3) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -572,18 +573,47 @@ program ncedit
         end do
         end do
         end do
-        if(debug_level.ge.100) print *, " Now calculating CAPE"
+        ! calculate CAPE, CIN or LFC
+        select case (varname)
+        case ('cape')
+           if(debug_level.ge.100) print *, " Now calculating CAPE [J kg-1]"
 !$omp parallel do default(shared) &
 !$omp private(i,t)
-        do t = 1, tmax, 1
-        do i = 1, imax, 1
-           CALL getcape( 2,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),tmp(i,t), &
-                gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
-        end do
-        if(debug_level.ge.200) print *, "  t,cape = ",t,tmp(xselect,t)
-        end do
-        if(debug_level.ge.100) print *, "done"
-
+           do t = 1, tmax, 1
+           do i = 1, imax, 1
+              CALL getcape( 2,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),tmp(i,t), &
+                   gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
+           end do
+           if(debug_level.ge.200) print *, "  t,cape = ",t,tmp(xselect,t)
+           end do
+           !
+        case ('cin')
+           if(debug_level.ge.100) print *, " Now calculating CIN [J kg-1]"
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+           do t = 1, tmax, 1
+           do i = 1, imax, 1
+              CALL getcape( 2,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
+                   tmp(i,t),gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
+           end do
+           if(debug_level.ge.200) print *, "  t,cin = ",t,tmp(xselect,t)
+           end do
+           !
+        case ('lfc')
+           if(debug_level.ge.100) print *, " Now calculating LFC [m]"
+!           if(debug_level.ge.100) print *, " Now calculating LFC [hPa]"
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+           do t = 1, tmax, 1
+           do i = 1, imax, 1
+              CALL getcape( 2,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
+                   gbcin,gblclp,gblfcp,gblnbp,gblclz,tmp(i,t),gblnbz,debug_level,1  ) ! unit: [m]
+!                   gbcin,gblclp,tmp(i,t),gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  ) ! unit: [Pa]
+           end do
+           if(debug_level.ge.200) print *, "  t,lfc = ",t,tmp(xselect,t)
+           end do
+        end select
+        if(debug_level.ge.100) print *, " Done"
      end select
 
   case ('rws')
@@ -858,7 +888,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-        case ('cape')
+        case ('cape','cin','lfc')
 !$omp parallel do default(shared) &
 !$omp private(i,t)
            do t = 1, tmax, 1
@@ -1493,7 +1523,7 @@ contains
     real :: th2,p2,t2,qv2,ql2,qi2,b2,pi2,thv2
     real :: thlast,fliq,fice,tbar,qvbar,qlbar,qibar,lhv,lhs,lhf,rm,cpm
     real*8 :: avgth,avgqv
-!    real :: getqvl,getqvi,getthx,gettd
+!    real :: getqvl,getqvi,getthx,gettd ! comment out for compiling with gfortran
     real :: ee,psource,tsource,qvsource
 
 !-----------------------------------------------------------------------
