@@ -1493,7 +1493,7 @@ contains
     real :: th2,p2,t2,qv2,ql2,qi2,b2,pi2,thv2
     real :: thlast,fliq,fice,tbar,qvbar,qlbar,qibar,lhv,lhs,lhf,rm,cpm
     real*8 :: avgth,avgqv
-    real :: getqvl,getqvi,getthx,gettd
+!    real :: getqvl,getqvi,getthx,gettd
     real :: ee,psource,tsource,qvsource
 
 !-----------------------------------------------------------------------
