@@ -299,6 +299,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "qc", varid) )
      if(debug_level.ge.100) print *, " Success: inquire the varid"
      if(debug_level.ge.200) print *, "  varid         = ", varid
+     if(debug_level.ge.300) print *, "   istart       = ", istart
+     if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, " Success: get the var array"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -316,6 +318,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "qr", varid) )
      if(debug_level.ge.100) print *, " Success: inquire the varid"
      if(debug_level.ge.200) print *, "  varid         = ", varid
+     if(debug_level.ge.300) print *, "   istart       = ", istart
+     if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, " Success: get the var array"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -333,6 +337,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "qi", varid) )
      if(debug_level.ge.100) print *, " Success: inquire the varid"
      if(debug_level.ge.200) print *, "  varid         = ", varid
+     if(debug_level.ge.300) print *, "   istart       = ", istart
+     if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, " Success: get the var array"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -350,6 +356,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "qs", varid) )
      if(debug_level.ge.100) print *, " Success: inquire the varid"
      if(debug_level.ge.200) print *, "  varid         = ", varid
+     if(debug_level.ge.300) print *, "   istart       = ", istart
+     if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, " Success: get the var array"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -367,6 +375,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "qg", varid) )
      if(debug_level.ge.100) print *, " Success: inquire the varid"
      if(debug_level.ge.200) print *, "  varid         = ", varid
+     if(debug_level.ge.300) print *, "   istart       = ", istart
+     if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, " Success: get the var array"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -403,6 +413,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -438,6 +450,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "th", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -473,6 +487,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "qv", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -523,6 +539,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_inc, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (prs)"
      if(debug_level.ge.200) print *, " var_inc(1,1,1,1) = ", var_inc(1,1,1,1)
@@ -542,6 +560,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "th", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_inc, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (th)"
      if(debug_level.ge.200) print *, " var_inc(1,1,1,1) = ", var_inc(1,1,1,1)
@@ -563,6 +583,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "qv", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_inc, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (qv)"
      if(debug_level.ge.200) print *, " var_inc(1,1,1,1) = ", var_inc(1,1,1,1)
@@ -631,6 +653,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "uinterp", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -650,6 +674,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "vinterp", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -679,6 +705,8 @@ program ncedit
      call check( nf90_inq_varid(ncid, "rain", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
