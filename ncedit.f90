@@ -244,19 +244,23 @@ program ncedit
      tmp5(:,:) = nan
   case (3)
      ! x-t
-     allocate( var_in(imax,1,tmax,1) )
-     istart = (/ 1, yselect, 1, 1 /)
-     icount = (/ imax, 1, tmax, 1 /)
-     allocate( tmp(imax,tmax) )
-     tmp(1:imax,1:tmax) = nan
-     ! for calculating CAPE using getcape
-     allocate( var_inc(imax,1,kmax,tmax) )
-     istart = (/ 1, yselect, 1, 1 /)
-     icount = (/ imax, 1, kmax, tmax /)
-     allocate( tmpc1(imax,kmax,tmax),tmpc2(imax,kmax,tmax),tmpc3(imax,kmax,tmax) )
-     tmpc1(1:imax,1:kmax,1:tmax) = nan
-     tmpc2(1:imax,1:kmax,1:tmax) = nan
-     tmpc3(1:imax,1:kmax,1:tmax) = nan
+     select case (varname)
+     case ('cape','cin','lfc')
+        ! for calculating CAPE using getcape
+        allocate( var_inc(imax,1,kmax,tmax) )
+        istart = (/ 1, yselect, 1, 1 /)
+        icount = (/ imax, 1, kmax, tmax /)
+        allocate( tmpc1(imax,kmax,tmax),tmpc2(imax,kmax,tmax),tmpc3(imax,kmax,tmax) )
+        tmpc1(1:imax,1:kmax,1:tmax) = nan
+        tmpc2(1:imax,1:kmax,1:tmax) = nan
+        tmpc3(1:imax,1:kmax,1:tmax) = nan
+     case default
+        allocate( var_in(imax,1,tmax,1) )
+        istart = (/ 1, yselect, 1, 1 /)
+        icount = (/ imax, 1, tmax, 1 /)
+        allocate( tmp(imax,tmax) )
+        tmp(1:imax,1:tmax) = nan
+     end select
   case (4)
      ! time series of a value
      allocate( var_in(imax,jmax,tmax,1) )
@@ -698,9 +702,12 @@ program ncedit
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
+     if(debug_level.ge.200) print *, "Use default case"
      call check( nf90_inq_varid(ncid, varname, varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
@@ -880,8 +887,8 @@ program ncedit
         select case (varname)
         case ('rain')
            if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
-!$omp parallel do default(shared) &
-!$omp private(i,t)
+!!! !$omp parallel do default(shared) &
+!!! !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = var_in(i,1,t,1)*real(10.) ! unit: [cm] -> [mm]
@@ -889,8 +896,8 @@ program ncedit
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
         case ('cape','cin','lfc')
-!$omp parallel do default(shared) &
-!$omp private(i,t)
+!!! !$omp parallel do default(shared) &
+!!! !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
@@ -898,8 +905,8 @@ program ncedit
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
         case default
-!$omp parallel do default(shared) &
-!$omp private(i,t)
+!!! !$omp parallel do default(shared) &
+!!! !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = var_in(i,1,t,1)
