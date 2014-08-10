@@ -391,7 +391,7 @@ program ncedit
   case ('thetae')
      ! equivalent potential temperature [K]
      ! *** this section work with flag = 1, 2 or 5 ***
-     if( (flag.ne.1).or.(flag.ne.2).or.(flag.ne.5) ) then
+     if( (flag.eq.3).or.(flag.eq.4) ) then
         print *, " flag = ", flag, "is under construction for now..."
         stop
      end if
@@ -1950,8 +1950,8 @@ contains
 !    plfc = plfc*100. ! unit: [hPa]
 !    pel  = pel*100.  ! unit: [hPa]
 
-    if(debug_level.ge.200) print *,'  zlcl,zlfc,zel = ',zlcl,zlfc,zel
-    if(debug_level.ge.200) print *,'  plcl,plfc,pel = ',plcl,plfc,pel
+    if(debug_level.ge.300) print *,'  zlcl,zlfc,zel = ',zlcl,zlfc,zel
+    if(debug_level.ge.300) print *,'  plcl,plfc,pel = ',plcl,plfc,pel
 
 !---- All done ----!
 

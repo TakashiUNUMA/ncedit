@@ -5,8 +5,8 @@
 #
 
 #COMPILER=INTEL
-#COMPILER=GNU
-COMPILER=PGI
+COMPILER=GNU
+#COMPILER=PGI
 
 #-------------------------------------------------
 # Make for Intel Compiler on Linux x86_64 system
@@ -28,15 +28,15 @@ endif
 ifeq ($(COMPILER),GNU)
 FC	= gfortran
 #FFLAGS	 = -frecord-marker=4 -ffree-form -O3 -ftree-vectorize -funroll-loops -fno-range-check
-FFLAGS	= -frecord-marker=4 -ffree-form -O -fopenmp -fbounds-check -fno-range-check #-Wall -Wuninitialized -Wmaybe-uninitialized -ffpe-trap=invalid,zero,overflow
-# -- rx2000,gpgpu
-#NETCDF  = /home/unuma/usr/local/netcdf-4.1.3-gnu
-#ZLIB    = /home/unuma/usr/local/zlib-1.2.5-gnu
-#HDF5    = /home/unuma/usr/local/hdf5-1.8.7-gnu
+FFLAGS	= -frecord-marker=4 -ffree-form -O -fopenmp -fbounds-check -fno-range-check -Wall -Wuninitialized -ffpe-trap=invalid,zero,overflow
+# -- rx2000,gpgpu,nimbus
+NETCDF  = /home/unuma/usr/local/netcdf-4.1.3-gnu
+ZLIB    = /home/unuma/usr/local/zlib-1.2.5-gnu
+HDF5    = /home/unuma/usr/local/hdf5-1.8.7-gnu
 # -- qsmcs,mcs
-NETCDF  = /usr
-ZLIB    = /usr
-HDF5    = /usr
+#NETCDF  = /usr
+#ZLIB    = /usr
+#HDF5    = /usr
 # -- kudpc
 #NETCDF  = /LARGE0/gr10053/b31894/lib/netcdf-4.1.3-gnu
 #ZLIB    = /LARGE0/gr10053/b31894/lib/hdf5-1.8.12-gnu
