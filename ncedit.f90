@@ -35,7 +35,7 @@ program ncedit
   real, dimension(:),       allocatable :: yy
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
-  real, dimension(:,:,:,:), allocatable :: var_inc
+!  real, dimension(:,:,:,:), allocatable :: var_inc
   real, dimension(:,:,:),   allocatable :: tmpc1, tmpc2, tmpc3
   real, parameter :: pi = 3.14159265
   real, parameter :: t0 = 273.15
@@ -247,13 +247,15 @@ program ncedit
      select case (varname)
      case ('cape','cin','lfc')
         ! for calculating CAPE using getcape
-        allocate( var_inc(imax,1,kmax,tmax) )
+        allocate( var_in(imax,1,kmax,tmax) )
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
         allocate( tmpc1(imax,kmax,tmax),tmpc2(imax,kmax,tmax),tmpc3(imax,kmax,tmax) )
         tmpc1(1:imax,1:kmax,1:tmax) = nan
         tmpc2(1:imax,1:kmax,1:tmax) = nan
         tmpc3(1:imax,1:kmax,1:tmax) = nan
+        allocate( tmp(imax,tmax) )
+        tmp(1:imax,1:tmax) = nan
      case default
         allocate( var_in(imax,1,tmax,1) )
         istart = (/ 1, yselect, 1, 1 /)
@@ -541,9 +543,9 @@ program ncedit
      if(debug_level.ge.200) print *, " varid         = ", varid
      if(debug_level.ge.300) print *, "  istart       = ", istart
      if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_inc, start = istart, count = icount ) )
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (prs)"
-     if(debug_level.ge.200) print *, " var_inc(1,1,1,1) = ", var_inc(1,1,1,1)
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (3)
 !$omp parallel do default(shared) &
@@ -551,7 +553,7 @@ program ncedit
         do t = 1, tmax, 1
         do k = 1, kmax, 1
         do i = 1, imax, 1
-           tmpc1(i,k,t) = var_inc(i,1,k,t)*real(0.01) ! unit: [hPa]
+           tmpc1(i,k,t) = var_in(i,1,k,t)*real(0.01) ! unit: [hPa]
         end do
         end do
         end do
@@ -562,9 +564,9 @@ program ncedit
      if(debug_level.ge.200) print *, " varid         = ", varid
      if(debug_level.ge.300) print *, "  istart       = ", istart
      if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_inc, start = istart, count = icount ) )
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (th)"
-     if(debug_level.ge.200) print *, " var_inc(1,1,1,1) = ", var_inc(1,1,1,1)
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (3)
 !$omp parallel do default(shared) &
@@ -572,7 +574,7 @@ program ncedit
         do t = 1, tmax, 1
         do k = 1, kmax, 1
         do i = 1, imax, 1
-           tmp0 = var_inc(i,1,k,t)
+           tmp0 = var_in(i,1,k,t)
            ! calculate temperature [degree C] using theta [K] and pressure [Pa]
            tmpc2(i,k,t) = thetaP_2_T( tmp0, tmpc1(i,k,t)*100. ) - t0 ! unit: [degree C]
         end do
@@ -585,9 +587,9 @@ program ncedit
      if(debug_level.ge.200) print *, " varid         = ", varid
      if(debug_level.ge.300) print *, "  istart       = ", istart
      if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_inc, start = istart, count = icount ) )
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (qv)"
-     if(debug_level.ge.200) print *, " var_inc(1,1,1,1) = ", var_inc(1,1,1,1)
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (3)
 !$omp parallel do default(shared) &
@@ -595,7 +597,7 @@ program ncedit
         do t = 1, tmax, 1
         do k = 1, kmax, 1
         do i = 1, imax, 1
-           tmpc3(i,k,t) = var_inc(i,1,k,t)
+           tmpc3(i,k,t) = var_in(i,1,k,t)
         end do
         end do
         end do
