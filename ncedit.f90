@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/08/10
+! last modified: 2014/08/12
 !
 
 program ncedit
@@ -30,12 +30,11 @@ program ncedit
   integer, dimension(2) :: ostart, ocount, dimids, chunks
   integer, dimension(4) :: istart, icount
   integer, dimension(2) :: ipoints
-  real :: tmp0
+  real :: tmp0,tmpmax,tmpmin
   real :: gbcape,gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz
   real, dimension(:),       allocatable :: yy
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
-!  real, dimension(:,:,:,:), allocatable :: var_inc
   real, dimension(:,:,:),   allocatable :: tmpc1, tmpc2, tmpc3
   real, parameter :: pi = 3.14159265
   real, parameter :: t0 = 273.15
@@ -87,7 +86,7 @@ program ncedit
   if(debug_level.ge.100) print *, ""
 
 
-  ! check error
+  ! check run-time-errors
   if(xselect.gt.imax) then
      print *, " Error: xselect exceeds imax "
      print *, "  xselect = ",xselect
@@ -729,6 +728,55 @@ program ncedit
         end do
      end select
 
+  case ('apw','apm','aps','ape')
+     ! area of precipitation [km^2]
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     tmp(1:tmax,1) = 0. ! The tmp array is cleared with zero instend of nan
+     ! --- read rain [cm]
+     call check( nf90_inq_varid(ncid, "rain", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (4)
+        select case (varname)
+        case ('apw') ! area of weak precipitation 0.1 - 1.0 [mm/h]
+           tmpmin = 0.1
+           tmpmax = 1.0
+        case ('apm') ! area of midium precipitation 1.0 - 10.0 [mm/h]
+           tmpmin = 1.0
+           tmpmax = 10.0
+        case ('aps') ! area of strong precipitation 10.0 - 50.0 [mm/h]
+           tmpmin = 10.0
+           tmpmax = 50.0
+        case ('ape') ! area of extreme precipitation 50.0 - 200.0 [mm/h]
+           tmpmin = 50.0
+           tmpmax = 200.0
+        end select
+        ! for t = 1
+        tmp(1,1) = 0.0
+!$omp parallel do default(shared) &
+!$omp private(i,j,t,tmp0) &
+!$omp reduction(+:tmp)
+        ! for t >= 2
+        do t = 2, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp0 = (var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.) ! unit [cm] -> [mm/h] for dt = 1 min
+           if( (tmp0.ge.tmpmin).and.(tmp0.lt.tmpmax) ) tmp(t,1) = tmp(t,1) + 1. ! for dx = 1 km
+        end do
+        end do
+        end do
+     end select
+
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
@@ -756,6 +804,8 @@ program ncedit
   if(flag.eq.4) then
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! Output 1D file
+     ! The variables are work with this option;
+     !  "maxrain", "apw", "apm", "aps", "ape"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! create the file
      open(unit=20,file=output)
