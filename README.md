@@ -160,3 +160,11 @@ ncedit.f90 は、
 - x-y 断面の拡張
 - 一時配列確保時の高速化
 - 開発環境を make から SCons へ移行中
+
+
+# MEMO
+- CentOS 6.X 系では，Python ver. 2.7.8 + scons ver. 2.3.2 の組み合わせで成功
+- Python のバージョンを下げて (e.g, ver. 2.6.6) scons ver. 2.3.2 をインストールすると，実行時にエラーを吐いて正常に動作しない
+- NetCDF 関連のライブラリリンクは非常に良好
+- PGI fortran compiler を使用するときは，絶対パスでコンパイラを指定する必要がある (SConstruct 内部の PATH の問題？)
+- Intel fortran のみうまく実行出来ない (KUDPC 上では，ライセンス認証に失敗した．これも内部 PATH の問題？)
