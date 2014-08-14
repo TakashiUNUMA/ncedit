@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/08/12
+! last modified: 2014/08/14
 !
 
 program ncedit
@@ -216,31 +216,34 @@ program ncedit
         allocate( var_in(imax,jmax,1,1) )
         istart = (/ 1, 1, tselect, 1 /)
         icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
      case default
         allocate( var_in(imax,jmax,1,1) )
         istart = (/ 1, 1, zselect, tselect /)
         icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
      end select
      allocate( tmp(imax,jmax) )
      allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax) )
-     tmp(:,:) = nan
-     tmp1(:,:) = nan
-     tmp2(:,:) = nan
-     tmp3(:,:) = nan
+     tmp(1:imax,1:jmax) = nan
+     tmp1(1:imax,1:jmax) = nan
+     tmp2(1:imax,1:jmax) = nan
+     tmp3(1:imax,1:jmax) = nan
   case (2)
      ! x-z
      allocate( var_in(imax,1,kmax,1) )
      istart = (/ 1, yselect, 1, tselect /)
      icount = (/ imax, 1, kmax, 1 /)
+     var_in(1:imax,1,1:kmax,1) = nan
      allocate( tmp(imax,kmax) )
      allocate( tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) )
      allocate( tmp4(imax,kmax),tmp5(imax,kmax) )
-     tmp(:,:) = nan
-     tmp1(:,:) = nan
-     tmp2(:,:) = nan
-     tmp3(:,:) = nan
-     tmp4(:,:) = nan
-     tmp5(:,:) = nan
+     tmp(1:imax,1:kmax) = nan
+     tmp1(1:imax,1:kmax) = nan
+     tmp2(1:imax,1:kmax) = nan
+     tmp3(1:imax,1:kmax) = nan
+     tmp4(1:imax,1:kmax) = nan
+     tmp5(1:imax,1:kmax) = nan
   case (3)
      ! x-t
      select case (varname)
@@ -249,24 +252,39 @@ program ncedit
         allocate( var_in(imax,1,kmax,tmax) )
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
+        var_in(1:imax,1,1:kmax,1:tmax) = nan
         allocate( tmpc1(imax,kmax,tmax),tmpc2(imax,kmax,tmax),tmpc3(imax,kmax,tmax) )
         tmpc1(1:imax,1:kmax,1:tmax) = nan
         tmpc2(1:imax,1:kmax,1:tmax) = nan
         tmpc3(1:imax,1:kmax,1:tmax) = nan
         allocate( tmp(imax,tmax) )
         tmp(1:imax,1:tmax) = nan
+     case ('thetae')
+        ! for calculating thetae
+        allocate( var_in(imax,1,1,tmax) )
+        istart = (/ 1, yselect, zselect, 1 /)
+        icount = (/ imax, 1, 1, tmax /)
+        var_in(1:imax,1,1,1:tmax) = nan
+        allocate( tmp1(imax,tmax),tmp2(imax,tmax),tmp3(imax,tmax) )
+        tmp1(1:imax,1:tmax) = nan
+        tmp2(1:imax,1:tmax) = nan
+        tmp3(1:imax,1:tmax) = nan
+        allocate( tmp(imax,tmax) )
+        tmp(1:imax,1:tmax) = nan
      case default
         allocate( var_in(imax,1,tmax,1) )
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, tmax, 1 /)
+        var_in(1:imax,1,1:tmax,1) = nan
         allocate( tmp(imax,tmax) )
         tmp(1:imax,1:tmax) = nan
      end select
   case (4)
-     ! time series of a value
+     ! a variable for time series
      allocate( var_in(imax,jmax,tmax,1) )
      istart = (/ 1, 1, 1, 1 /)
      icount = (/ imax, jmax, tmax, 1 /)
+     var_in(1:imax,1:jmax,1:tmax,1) = nan
      allocate( tmp(tmax,1) )
      tmp(1:tmax,1) = nan
   case (5)
@@ -274,16 +292,17 @@ program ncedit
      allocate( var_in(imax,jmax,kmax,1) )
      istart = (/ 1, 1, 1, tselect /)
      icount = (/ imax, jmax, kmax, 1 /)
+     var_in(1:imax,1:jmax,1:kmax,1) = nan
      allocate( tmpi(imax,jmax,kmax) )
      allocate( tmpi1(imax,jmax,kmax),tmpi2(imax,jmax,kmax),tmpi3(imax,jmax,kmax) )
-     tmpi(:,:,:) = nan
-     tmpi1(:,:,:) = nan
-     tmpi2(:,:,:) = nan
-     tmpi3(:,:,:) = nan
+     tmpi(1:imax,1:jmax,1:kmax) = nan
+     tmpi1(1:imax,1:jmax,1:kmax) = nan
+     tmpi2(1:imax,1:jmax,1:kmax) = nan
+     tmpi3(1:imax,1:jmax,1:kmax) = nan
      allocate( tmp(imax,kmax) )
-     tmp(:,:) = nan
+     tmp(1:imax,1:kmax) = nan
   end select
-  var_in(:,:,:,:) = nan
+!  var_in(:,:,:,:) = nan ! it will be removed because shape of the var_in array is allways different
 
   
   ! inquire and get var
@@ -405,8 +424,8 @@ program ncedit
 
   case ('thetae')
      ! equivalent potential temperature [K]
-     ! *** this section work with flag = 1, 2 or 5 ***
-     if( (flag.eq.3).or.(flag.eq.4) ) then
+     ! *** this section work with flag = 1, 2, 3 or 5 ***
+     if( flag.eq.4 ) then
         print *, " flag = ", flag, "is under construction for now..."
         stop
      end if
@@ -417,7 +436,7 @@ program ncedit
      if(debug_level.ge.300) print *, "  istart       = ", istart
      if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, "Success: get the var array (prs)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (1)
@@ -434,6 +453,14 @@ program ncedit
         do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp1(i,k) = var_in(i,1,k,1)
+        end do
+        end do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp1(i,t) = var_in(i,1,1,t)
         end do
         end do
      case (5)
@@ -454,7 +481,7 @@ program ncedit
      if(debug_level.ge.300) print *, "  istart       = ", istart
      if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, "Success: get the var array (th)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (1)
@@ -471,6 +498,14 @@ program ncedit
         do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp2(i,k) = var_in(i,1,k,1)
+        end do
+        end do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp2(i,t) = var_in(i,1,1,t)
         end do
         end do
      case (5)
@@ -491,7 +526,7 @@ program ncedit
      if(debug_level.ge.300) print *, "  istart       = ", istart
      if(debug_level.ge.300) print *, "  icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.100) print *, "Success: get the var array (qv)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (1)
@@ -514,6 +549,16 @@ program ncedit
            tmp(i,k) = thetae_Bolton( tmp0, tmp3(i,k), tmp1(i,k) )
         end do
         end do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t,tmp0)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp3(i,t) = var_in(i,1,1,t)
+           tmp0 = thetaP_2_T( tmp2(i,t), tmp1(i,t) )
+           tmp(i,t) = thetae_Bolton( tmp0, tmp3(i,t), tmp1(i,t) )
+        end do
+        end do
      case (5)
 !$omp parallel do default(shared) &
 !$omp private(i,j,k,tmp0)
@@ -529,9 +574,11 @@ program ncedit
      end select
 
   case ('cape','cin','lfc')
-     ! convective available potential energy [J kg-1]
-     ! convective inhibition [J kg-1]
-     ! *** this section work with flag = 3 ***
+     ! Calculate as following variables:
+     !  - convective available potential energy [J kg-1]
+     !  - convective inhibition [J kg-1]
+     !  - lebel of free convection [hPa]
+     ! *** this section work with flag = 3 only (for now) ***
      if(flag.ne.3) then
         print *, " flag = ", flag, "is under construction for now..."
         stop
@@ -804,7 +851,7 @@ program ncedit
   if(flag.eq.4) then
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! Output 1D file
-     ! The variables are work with this option;
+     ! The following variables are work with this option:
      !  "maxrain", "apw", "apm", "aps", "ape"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! create the file
@@ -967,8 +1014,6 @@ program ncedit
         select case (varname)
         case ('rain')
            if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
-!!! !$omp parallel do default(shared) &
-!!! !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = var_in(i,1,t,1)*real(10.) ! unit: [cm] -> [mm]
@@ -976,8 +1021,13 @@ program ncedit
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
         case ('cape','cin','lfc')
-!!! !$omp parallel do default(shared) &
-!!! !$omp private(i,t)
+           do t = 1, tmax, 1
+           do i = 1, imax, 1
+              var_out(i,t) = tmp(i,t)
+           end do
+           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+           end do
+        case ('thetae')
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
