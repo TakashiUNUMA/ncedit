@@ -14,6 +14,7 @@ program ncedit
   ! I/O values and arrays
   integer :: flag, xselect, yselect, zselect, tselect
   integer :: interp_x, interp_y
+  integer :: imax, jmax, kmax, tmax
   real :: dx, dy, angle
   real, dimension(:),       allocatable :: x, y, z, time_in
   real, dimension(:,:,:,:), allocatable :: var_in
@@ -25,13 +26,12 @@ program ncedit
 
   ! local variables
   integer :: i, j, k, t, ipoint, nx, ny
-  integer :: imax, jmax, kmax, tmax
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
   integer, dimension(2) :: ostart, ocount, dimids, chunks
   integer, dimension(4) :: istart, icount
   integer, dimension(2) :: ipoints
-  real :: tmp0,tmpmax,tmpmin
-  real :: gbcape,gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz
+  real :: tmp0, tmpmax, tmpmin
+  real :: gbcape, gbcin, gblclp, gblfcp, gblnbp, gblclz, gblfcz, gblnbz
   real, dimension(:),       allocatable :: yy
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
@@ -213,12 +213,12 @@ program ncedit
      ! x-y
      select case (varname)
      case ('rain','cpc','cref')
-        allocate( var_in(imax,jmax,1,1) )
+        allocate( var_in(imax,jmax,1,1) ) ! xy
         istart = (/ 1, 1, tselect, 1 /)
         icount = (/ imax, jmax, 1, 1 /)
         var_in(1:imax,1:jmax,1,1) = nan
      case default
-        allocate( var_in(imax,jmax,1,1) )
+        allocate( var_in(imax,jmax,1,1) ) ! xy
         istart = (/ 1, 1, zselect, tselect /)
         icount = (/ imax, jmax, 1, 1 /)
         var_in(1:imax,1:jmax,1,1) = nan
@@ -231,7 +231,7 @@ program ncedit
      tmp3(1:imax,1:jmax) = nan
   case (2)
      ! x-z
-     allocate( var_in(imax,1,kmax,1) )
+     allocate( var_in(imax,1,kmax,1) ) ! xz
      istart = (/ 1, yselect, 1, tselect /)
      icount = (/ imax, 1, kmax, 1 /)
      var_in(1:imax,1,1:kmax,1) = nan
@@ -249,7 +249,7 @@ program ncedit
      select case (varname)
      case ('cape','cin','lfc')
         ! for calculating CAPE using getcape
-        allocate( var_in(imax,1,kmax,tmax) )
+        allocate( var_in(imax,1,kmax,tmax) ) ! xzt
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
         var_in(1:imax,1,1:kmax,1:tmax) = nan
@@ -261,7 +261,7 @@ program ncedit
         tmp(1:imax,1:tmax) = nan
      case ('thetae')
         ! for calculating thetae
-        allocate( var_in(imax,1,1,tmax) )
+        allocate( var_in(imax,1,1,tmax) ) ! xt
         istart = (/ 1, yselect, zselect, 1 /)
         icount = (/ imax, 1, 1, tmax /)
         var_in(1:imax,1,1,1:tmax) = nan
@@ -281,7 +281,7 @@ program ncedit
      end select
   case (4)
      ! a variable for time series
-     allocate( var_in(imax,jmax,tmax,1) )
+     allocate( var_in(imax,jmax,tmax,1) ) ! xyt
      istart = (/ 1, 1, 1, 1 /)
      icount = (/ imax, jmax, tmax, 1 /)
      var_in(1:imax,1:jmax,1:tmax,1) = nan
@@ -289,7 +289,7 @@ program ncedit
      tmp(1:tmax,1) = nan
   case (5)
      ! arbitrary cross-section specifying (xselect,yselect) and angle
-     allocate( var_in(imax,jmax,kmax,1) )
+     allocate( var_in(imax,jmax,kmax,1) ) ! xyz
      istart = (/ 1, 1, 1, tselect /)
      icount = (/ imax, jmax, kmax, 1 /)
      var_in(1:imax,1:jmax,1:kmax,1) = nan
@@ -302,7 +302,6 @@ program ncedit
      allocate( tmp(imax,kmax) )
      tmp(1:imax,1:kmax) = nan
   end select
-!  var_in(:,:,:,:) = nan ! it will be removed because shape of the var_in array is allways different
 
   
   ! inquire and get var
@@ -310,7 +309,7 @@ program ncedit
   select case (varname)
   case ('water')
      ! for all water (qc+qr+qi+qc+qg) on the microphysics processes
-     ! *** this section work with flag = 2 ***
+     ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
         stop
@@ -333,6 +332,7 @@ program ncedit
            tmp1(i,k) = var_in(i,1,k,1)
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read qr
      call check( nf90_inq_varid(ncid, "qr", varid) )
@@ -352,6 +352,7 @@ program ncedit
            tmp2(i,k) = var_in(i,1,k,1)
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read qi
      call check( nf90_inq_varid(ncid, "qi", varid) )
@@ -371,6 +372,7 @@ program ncedit
            tmp3(i,k) = var_in(i,1,k,1)
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read qs
      call check( nf90_inq_varid(ncid, "qs", varid) )
@@ -390,6 +392,7 @@ program ncedit
            tmp4(i,k) = var_in(i,1,k,1)
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read qg
      call check( nf90_inq_varid(ncid, "qg", varid) )
@@ -409,6 +412,7 @@ program ncedit
            tmp5(i,k) = var_in(i,1,k,1)
         end do
         end do
+!$omp end parallel do
      end select
      ! --- calculate water = qc + qr + qi + qs + qg [kg/kg]
      select case (flag)
@@ -420,6 +424,7 @@ program ncedit
            tmp(i,k) = tmp1(i,k) + tmp2(i,k) + tmp3(i,k) + tmp4(i,k) + tmp5(i,k)
         end do
         end do
+!$omp end parallel do
      end select
 
   case ('thetae')
@@ -447,6 +452,7 @@ program ncedit
            tmp1(i,j) = var_in(i,j,1,1)
         end do
         end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -455,6 +461,7 @@ program ncedit
            tmp1(i,k) = var_in(i,1,k,1)
         end do
         end do
+!$omp end parallel do
      case (3)
 !$omp parallel do default(shared) &
 !$omp private(i,t)
@@ -463,6 +470,7 @@ program ncedit
            tmp1(i,t) = var_in(i,1,1,t)
         end do
         end do
+!$omp end parallel do
      case (5)
 !$omp parallel do default(shared) &
 !$omp private(i,j,k)
@@ -473,6 +481,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read theta [K]
      call check( nf90_inq_varid(ncid, "th", varid) )
@@ -492,6 +501,7 @@ program ncedit
            tmp2(i,j) = var_in(i,j,1,1)
         end do
         end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -500,6 +510,7 @@ program ncedit
            tmp2(i,k) = var_in(i,1,k,1)
         end do
         end do
+!$omp end parallel do
      case (3)
 !$omp parallel do default(shared) &
 !$omp private(i,t)
@@ -508,6 +519,7 @@ program ncedit
            tmp2(i,t) = var_in(i,1,1,t)
         end do
         end do
+!$omp end parallel do
      case (5)
 !$omp parallel do default(shared) &
 !$omp private(i,j,k)
@@ -518,6 +530,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read qv [kg/kg]
      call check( nf90_inq_varid(ncid, "qv", varid) )
@@ -539,6 +552,7 @@ program ncedit
            tmp(i,j) = thetae_Bolton( tmp0, tmp3(i,j), tmp1(i,j) )
         end do
         end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k,tmp0)
@@ -549,6 +563,7 @@ program ncedit
            tmp(i,k) = thetae_Bolton( tmp0, tmp3(i,k), tmp1(i,k) )
         end do
         end do
+!$omp end parallel do
      case (3)
 !$omp parallel do default(shared) &
 !$omp private(i,t,tmp0)
@@ -559,6 +574,7 @@ program ncedit
            tmp(i,t) = thetae_Bolton( tmp0, tmp3(i,t), tmp1(i,t) )
         end do
         end do
+!$omp end parallel do
      case (5)
 !$omp parallel do default(shared) &
 !$omp private(i,j,k,tmp0)
@@ -571,6 +587,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
 
   case ('cape','cin','lfc')
@@ -603,6 +620,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read theta [K]
      call check( nf90_inq_varid(ncid, "th", varid) )
@@ -626,6 +644,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read qv [kg/kg]
      call check( nf90_inq_varid(ncid, "qv", varid) )
@@ -647,6 +666,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
         ! calculate CAPE, CIN or LFC
         select case (varname)
         case ('cape')
@@ -660,7 +680,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "  t,cape = ",t,tmp(xselect,t)
            end do
-           !
+!$omp end parallel do
         case ('cin')
            if(debug_level.ge.100) print *, " Now calculating CIN [J kg-1]"
 !$omp parallel do default(shared) &
@@ -672,7 +692,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "  t,cin = ",t,tmp(xselect,t)
            end do
-           !
+!$omp end parallel do
         case ('lfc')
            if(debug_level.ge.100) print *, " Now calculating LFC [m]"
 !           if(debug_level.ge.100) print *, " Now calculating LFC [hPa]"
@@ -686,6 +706,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "  t,lfc = ",t,tmp(xselect,t)
            end do
+!$omp end parallel do
         end select
         if(debug_level.ge.100) print *, " Done"
      end select
@@ -717,6 +738,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
      ! --- read vinterp [m/s]
      call check( nf90_inq_varid(ncid, "vinterp", varid) )
@@ -740,6 +762,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
 
   case ('maxrain')
@@ -773,6 +796,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
 
   case ('apw','apm','aps','ape')
@@ -822,6 +846,7 @@ program ncedit
         end do
         end do
         end do
+!$omp end parallel do
      end select
 
   case default
@@ -928,6 +953,7 @@ program ncedit
      else if(flag.eq.2) then
         ! x-z
         if(debug_level.ge.100) print *, "x-z array"
+
         ! select one of the 2D array
         select case (varname)
         case ('water')
@@ -997,6 +1023,7 @@ program ncedit
      else if (flag.eq.3) then
         ! x-t array
         if(debug_level.ge.100) print *, "x-t array"
+
         ! ix
         if(interp_x.eq.1) then
            ! interpolate the stretched x-coordinate to constant dx coordinate
@@ -1043,6 +1070,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
+!!! !$omp end parallel do
         end select
 
      else if(flag.eq.5) then
@@ -1090,6 +1118,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
            end do
+!$omp end parallel do
 
         case default
 !$omp parallel do default(shared) &
@@ -1106,6 +1135,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
            end do
+!$omp end parallel do
 
         end select
 
@@ -1571,6 +1601,7 @@ contains
     
     return
   end function thetaP_2_T
+
 
 !-----------------------------------------------------------------------
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc

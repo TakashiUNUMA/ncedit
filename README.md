@@ -9,11 +9,11 @@ NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB ver. 1.2.5 を事前にコンパイル�
 上記のライブラリの準備は、[こちら](https://github.com/TakashiUNUMA/wrflib_instsh) を参照。
 
 
-ライブラリの準備が整ったら、Makefile を編集します。
+ライブラリの準備が整ったら、Makefile を編集します (現在、開発ツールを make から [scons](http://www.scons.org/) へ移行中です)。
 
-Intel, PGI, GNU fortran コンパイラのどれかを選択します。
+Intel, PGI, GNU fortran コンパイラのどれかを選択します (使用したいコンパイラの行をコメントアウトして下さい)。
 
-ここでは例として PGI コンパイラを選択します (コメントアウトして下さい)。
+ここでは例として PGI コンパイラを選択します。
 ```
 #COMPILER=INTEL
 #COMPILER=GNU
@@ -34,7 +34,7 @@ ncedit, ncedit_stats
 
 
 ## 使用方法
-基本的には、namelist.ncedit or namelist.ncedit_stats を編集し、使用します (プログラム本体をあまり弄らないで良いようにするため)。
+namelist.ncedit または namelist.ncedit_stats を編集し、使用します。
 
 ```
 &param
@@ -55,15 +55,15 @@ ncedit, ncedit_stats
  ny                 = 41           ! 出力する 2 次元断面の y 軸方向の grid 数 (x-y, x-z 断面用)
  dx                 = 0.500        ! 出力する 2 次元断面の x 軸方向の格子間隔 (x-y, x-z, x-t 断面用)
  dy                 = 0.500        ! 出力する 2 次元断面の y 軸方向の格子間隔 (x-z 断面用)
- angle              = 45.0         ! 任意の鉛直断面と x 軸と成す角度 (deg)
+ angle              = 45.0         ! 任意の鉛直断面と x 軸と成す角度 [deg] (for flag = 5)
  interp_x	    = 0            ! 出力する 2 次元断面の x 軸の内挿の有無 0: 内挿しない, 1: 内挿する
  interp_y	    = 0            ! 出力する 2 次元断面の y 軸の内挿の有無 0: 内挿しない, 1: (interp_method で) 内挿する
  interp_method	    = 'linear'     ! x-z 断面出力時の y 軸の内挿方法
-                                   !  'linear': 線形内挿
+                                   !  'linear': (1 次元) 線形内挿
                                    !  'near'  : 最近傍探索 (内挿はしない)
                                    !  'stpk'  : 最近傍探索 (内挿はしない)
  deflate_level      = 2            ! NetCDF4 の deflate level
- debug_level        = 100          ! デバッグレベル
+ debug_level        = 100          ! デバッグレベル (数値を大きくするほど，実行過程の詳細が出力される)
 /
 ```
 
@@ -145,20 +145,18 @@ ncedit.f90 は、
 
 
 # 謝辞
-辻野 智紀 氏が開発している、[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
-Gorge Bryan 氏の CAPE 計算サブルーチン (getcape.f) を使用させていただきました。
+- 辻野 智紀 氏が開発している、[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
+- Gorge Bryan 氏の CAPE 計算サブルーチン (getcape.F) を使用させていただきました。
 関係者各位に感謝申し上げます。
 
 
 # 参考文献・URL
-- http://www.u.tsukuba.ac.jp/~hayasaki.masamits.fw/Linux_tips/GMT_img_script/grdvector.gmt
 - http://www.unidata.ucar.edu/software/netcdf/docs/netcdf-f90/NF90_005fGET_005fVAR.html#NF90_005fGET_005fVAR
+- http://www.u.tsukuba.ac.jp/~hayasaki.masamits.fw/Linux_tips/GMT_img_script/grdvector.gmt
+- http://www.scons.org/doc/production/HTML/scons-user.html
 
 
 # TODO
 - x-y 断面の拡張
 - 一時配列確保時の高速化
-
-
-# その他
-何か質問・提案等ございましたら、 kijima.m.u __(at)__ gmail.com へどうぞ。
+- 開発環境を make から SCons へ移行中
