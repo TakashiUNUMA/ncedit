@@ -18,7 +18,7 @@ if COMPILER == "GNU":
     LIBFLAG = ['/usr/lib']
 
 elif COMPILER == "INTEL":
-    FORTRAN = '/opt/intel/bin/ifort'
+    FORTRAN = '/opt/intel/composer_xe_2013_sp1.2.144/bin/intel64/ifort'
     FFLAG   = ['-FR','-i-dynamic','-O0','-openmp']
     DFLAG   = ['-warn all','-check all','-gen_interfaces','-fpe0','-ftrapuv']
     INCFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-intel/include','/home/unuma/usr/local/hdf-1.8.7-intel/include','/home/unuma/usr/local/zlib-1.2.5-intel/include']

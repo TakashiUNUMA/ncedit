@@ -9,7 +9,8 @@ NetCDF ver. 4.1.3, HDF5 ver. 1.8.7, ZLIB ver. 1.2.5 を事前にコンパイル�
 上記のライブラリの準備は、[こちら](https://github.com/TakashiUNUMA/wrflib_instsh) を参照。
 
 
-ライブラリの準備が整ったら、Makefile を編集します (現在、開発ツールを make から [scons](http://www.scons.org/) へ移行中です)。
+### Make 編
+ライブラリの準備が整ったら、Makefile を編集します。
 
 Intel, PGI, GNU fortran コンパイラのどれかを選択します (使用したいコンパイラの行をコメントアウトして下さい)。
 
@@ -26,6 +27,32 @@ COMPILER=PGI
 編集が完了したら make します。
 ```
  $ make
+```
+
+ncedit, ncedit_stats
+
+というバイナリが作成されていたら OK 。
+
+
+### SCons 編
+
+ライブラリの準備が整ったら、SConstruct を編集します。
+
+Intel, PGI, GNU fortran コンパイラのどれかを選択します (使用したいコンパイラの行をコメントアウトして下さい)。
+
+ここでは例として GNU コンパイラを選択します。
+```
+#COMPILER=INTEL
+COMPILER=GNU
+#COMPILER=PGI
+```
+
+注意：使用するコンパイラは、コンパイル済みのライブラリで使用したコンパイラと一致している必要が有ります。
+
+
+編集が完了したら make します。
+```
+ $ scons
 ```
 
 ncedit, ncedit_stats
@@ -56,8 +83,8 @@ namelist.ncedit または namelist.ncedit_stats を編集し、使用します�
  dx                 = 0.500        ! 出力する 2 次元断面の x 軸方向の格子間隔 (x-y, x-z, x-t 断面用)
  dy                 = 0.500        ! 出力する 2 次元断面の y 軸方向の格子間隔 (x-z 断面用)
  angle              = 45.0         ! 任意の鉛直断面と x 軸と成す角度 [deg] (for flag = 5)
- interp_x	    = 0            ! 出力する 2 次元断面の x 軸の内挿の有無 0: 内挿しない, 1: 内挿する
- interp_y	    = 0            ! 出力する 2 次元断面の y 軸の内挿の有無 0: 内挿しない, 1: (interp_method で) 内挿する
+ interp_x           = 0            ! 出力する 2 次元断面の x 軸の内挿の有無 0: 内挿しない, 1: 内挿する
+ interp_y           = 0            ! 出力する 2 次元断面の y 軸の内挿の有無 0: 内挿しない, 1: (interp_method で) 内挿する
  interp_method	    = 'linear'     ! x-z 断面出力時の y 軸の内挿方法
                                    !  'linear': (1 次元) 線形内挿
                                    !  'near'  : 最近傍探索 (内挿はしない)
@@ -69,50 +96,50 @@ namelist.ncedit または namelist.ncedit_stats を編集し、使用します�
 
 例1: 4 次元データを x-y 断面として出力する場合
 ```
- flag          = 1        ( x-y 断面 )
- zselect       = 20       ( z 軸の 20 grid 目 )
- tselect       = 60       ( 計算開始から 60 ステップ目 )
- nx            = 128      ( grid 数: x 軸 )
- ny            = 128      ( grid 数: y 軸 )
+ flag               = 1        ( x-y 断面 )
+ zselect            = 20       ( z 軸の 20 grid 目 )
+ tselect            = 60       ( 計算開始から 60 ステップ目 )
+ nx                 = 128      ( grid 数: x 軸 )
+ ny                 = 128      ( grid 数: y 軸 )
 ```
 
 例2: 4 次元データを x-z 断面として出力する場合
 ```
- flag          = 2        ( x-z 断面 )
- yselect       = 2        ( y 軸の 2 grid 目 )
- tselect       = 240      ( 計算開始から 240 ステップ目 )
- nx            = 256      ( 出力データの x 軸 grid 数 )
- ny            = 41       ( 出力データの y 軸 grid 数 )
- dx            = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
- dy            = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
- interp_x      = 1        ( x 軸座標の内挿 )
- interp_y      = 1        ( y 軸座標の内挿 )
- interp_method = 'linear' ( y 軸の内挿方法 )
+ flag               = 2        ( x-z 断面 )
+ yselect            = 2        ( y 軸の 2 grid 目 )
+ tselect            = 240      ( 計算開始から 240 ステップ目 )
+ nx                 = 256      ( 出力データの x 軸 grid 数 )
+ ny                 = 41       ( 出力データの y 軸 grid 数 )
+ dx                 = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ dy                 = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ interp_x           = 1        ( x 軸座標の内挿 )
+ interp_y           = 1        ( y 軸座標の内挿 )
+ interp_method      = 'linear' ( y 軸の内挿方法 )
 ```
 
 例3: 4 次元データを x-t 断面として出力する場合
 ```
- flag          = 3        ( x-t 断面 )
- yselect       = 2        ( y 軸の 2 grid 目 )
- zselect       = 1        ( z 軸の 1 grid 目 )
- nx            = 128      ( grid 数: x 軸 )
- ny            = 128      ( grid 数: t 軸 )
- interp_x      = 0        ( x 軸座標をそのまま出力 )
- interp_y      = 0        ( y 軸座標をそのまま出力 )
+ flag               = 3        ( x-t 断面 )
+ yselect            = 2        ( y 軸の 2 grid 目 )
+ zselect            = 1        ( z 軸の 1 grid 目 )
+ nx                 = 128      ( grid 数: x 軸 )
+ ny                 = 128      ( grid 数: t 軸 )
+ interp_x           = 0        ( x 軸座標をそのまま出力 )
+ interp_y           = 0        ( y 軸座標をそのまま出力 )
 ```
 
 例4: 4 次元データを x-z 任意断面として出力する場合
 ```
- flag          = 5        ( x-z 任意断面 )
- xselect       = 0        ( 投影水平軸の中心座標位置 )
- yselect       = 0        ( 投影水平軸の中心座標位置 )
- tselect       = 240      ( 計算開始から 240 ステップ目 )
- nx            = 256      ( 出力データの x 軸 grid 数 )
- ny            = 41       ( 出力データの y 軸 grid 数 )
- dy            = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
- angle         = 45.0     ( 投影面の x 軸からの角度 )
- interp_y      = 1        ( y 軸座標の内挿 )
- interp_method = 'linear' ( y 軸の内挿方法 )
+ flag               = 5        ( x-z 任意断面 )
+ xselect            = 0        ( 投影水平軸の中心座標位置 )
+ yselect            = 0        ( 投影水平軸の中心座標位置 )
+ tselect            = 240      ( 計算開始から 240 ステップ目 )
+ nx                 = 256      ( 出力データの x 軸 grid 数 )
+ ny                 = 41       ( 出力データの y 軸 grid 数 )
+ dy                 = 0.500    ( 元データが stretch の場合、0.5 km の等格子間隔に直す )
+ angle              = 45.0     ( 投影面の x 軸からの角度 )
+ interp_y           = 1        ( y 軸座標の内挿 )
+ interp_method      = 'linear' ( y 軸の内挿方法 )
 ```
 
 
@@ -122,7 +149,7 @@ ncedit.f90 は、
 - 出力時の単位変換
 - 元データに無い変数の計算
 
-等のため、出来るだけ単純化しているつもりです(が、既に複雑になってしまいました)。
+等のため、出来るだけ単純化しているつもりです (が、既に複雑になってしまいました)。
 
 
 ## 出力データの確認 (ncdump, ncview 等)
@@ -147,6 +174,7 @@ ncedit.f90 は、
 # 謝辞
 - 辻野 智紀 氏が開発している、[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
 - Gorge Bryan 氏の CAPE 計算サブルーチン (getcape.F) を使用させていただきました。
+
 関係者各位に感謝申し上げます。
 
 
@@ -157,14 +185,11 @@ ncedit.f90 は、
 
 
 # TODO
-- x-y 断面の拡張
-- 一時配列確保時の高速化
-- 開発環境を make から SCons へ移行中
 
 
 # MEMO
-- CentOS 6.X 系では，Python ver. 2.7.8 + scons ver. 2.3.2 の組み合わせで成功
+- Ubuntu 14.04 では，apt-get install scons で取得した scons ver. 2.3.0 で正常動作中
+- CentOS 5.X, 6.X 系では，Python ver. 2.7.8 + scons ver. 2.3.2 の組み合わせで正常動作中
+- NetCDF 関連のライブラリリンクは非常に良好 (GNU make より楽)
 - Python のバージョンを下げて (e.g, ver. 2.6.6) scons ver. 2.3.2 をインストールすると，実行時にエラーを吐いて正常に動作しない
-- NetCDF 関連のライブラリリンクは非常に良好
-- PGI fortran compiler を使用するときは，絶対パスでコンパイラを指定する必要がある (SConstruct 内部の PATH の問題？)
-- Intel fortran のみうまく実行出来ない (KUDPC 上では，ライセンス認証に失敗した．これも内部 PATH の問題？)
+- PGI, Intel fortran compiler を使用するときは，絶対パスでコンパイラを指定する必要がある (SConstruct 内部の PATH の問題？)
