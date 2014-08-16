@@ -11,8 +11,8 @@ import os.path
 
 # select compiler
 #COMPILER = "GNU"
-COMPILER = "INTEL"
-#COMPILER = "PGI"
+#COMPILER = "INTEL"
+COMPILER = "PGI"
 
 if COMPILER == "GNU":
     FORTRAN = 'gfortran'
@@ -25,15 +25,19 @@ elif COMPILER == "INTEL":
     FORTRAN = 'ifort'
     FFLAG   = ['-FR','-i-dynamic','-O0','-openmp']
     DFLAG   = ['-warn all','-check all','-gen_interfaces','-fpe0','-ftrapuv']
-    INCFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-intel/include','/home/unuma/usr/local/hdf-1.8.7-intel/include','/home/unuma/usr/local/zlib-1.2.5-intel/include']
-    LIBFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-intel/lib','/home/unuma/usr/local/hdf-1.8.7-intel/lib','/home/unuma/usr/local/zlib-1.2.5-intel/lib']
+#    INCFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-intel/include','/home/unuma/usr/local/hdf-1.8.7-intel/include','/home/unuma/usr/local/zlib-1.2.5-intel/include']
+#    LIBFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-intel/lib','/home/unuma/usr/local/hdf-1.8.7-intel/lib','/home/unuma/usr/local/zlib-1.2.5-intel/lib']
+    INCFLAG = ['/LARGE0/gr10053/b31894/lib/netcdf-4.1.3-intel/include','/LARGE0/gr10053/b31894/lib/hdf5-1.8.7-intel/include','/LARGE0/gr10053/b31894/lib/zlib-1.2.5-intel/include']
+    LIBFLAG = ['/LARGE0/gr10053/b31894/lib/netcdf-4.1.3-intel/lib','/LARGE0/gr10053/b31894/lib/hdf5-1.8.7-intel/lib','/LARGE0/gr10053/b31894/lib/zlib-1.2.5-intel/lib']
 
 elif COMPILER == "PGI":
     FORTRAN = 'pgfortran'
     FFLAG   = ['-m64','-Mfree','-Kieee','-O0','-mp']
     DFLAG   = ['-Minfo','-Ktrap=fp','-Minform=inform','-Mbounds','-Mlre=noassoc']
-    INCFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-pgi/include','/home/unuma/usr/local/hdf-1.8.7-pgi/include','/home/unuma/usr/local/zlib-1.2.5-pgi/include']
-    LIBFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-pgi/lib','/home/unuma/usr/local/hdf-1.8.7-pgi/lib','/home/unuma/usr/local/zlib-1.2.5-pgi/lib']
+#    INCFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-pgi/include','/home/unuma/usr/local/hdf-1.8.7-pgi/include','/home/unuma/usr/local/zlib-1.2.5-pgi/include']
+#    LIBFLAG = ['/home/unuma/usr/local/netcdf-4.1.3-pgi/lib','/home/unuma/usr/local/hdf-1.8.7-pgi/lib','/home/unuma/usr/local/zlib-1.2.5-pgi/lib']
+    INCFLAG = ['/LARGE0/gr10053/b31894/lib/netcdf-4.1.3-pgi/include','/LARGE0/gr10053/b31894/lib/hdf5-1.8.12-pgi/include','/LARGE0/gr10053/b31894/lib/zlib-1.2.8-pgi/include']
+    LIBFLAG = ['/LARGE0/gr10053/b31894/lib/netcdf-4.1.3-pgi/lib','/LARGE0/gr10053/b31894/lib/hdf5-1.8.12-pgi/lib','/LARGE0/gr10053/b31894/lib/zlib-1.2.8-pgi/lib']
 
 else:
     print COMPILER + u"is not supported on this SConstruct (for now)"

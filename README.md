@@ -192,4 +192,5 @@ ncedit.f90 は、
 - CentOS 5.X, 6.X 系では，Python ver. 2.7.8 + scons ver. 2.3.2 の組み合わせで正常動作中
 - NetCDF 関連のライブラリリンクは非常に良好 (GNU make より楽)
 - Python のバージョンを下げて (e.g, ver. 2.6.6) scons ver. 2.3.2 をインストールすると，実行時にエラーを吐いて正常に動作しない
-- PGI, Intel fortran compiler を使用するときは，絶対パスでコンパイラを指定する必要がある (SConstruct 内部の PATH の問題？)
+- import os として環境変数を読み込ませることで .bashrc 等で設定した環境変数を SConstruct に読み込ませることが可能
+- gfortran (ver. 4.4.6, 4.8.1), ifort (ver. 13.1.3, 14.0.2), pgfortran (ver. 12.10, 13.10) で動作確認済み
