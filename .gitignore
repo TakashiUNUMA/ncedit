@@ -1,1 +1,5 @@
 .sconsign.dblite
+ncedit
+ncedit.o
+ncedit_stats
+ncedit_stats.o
