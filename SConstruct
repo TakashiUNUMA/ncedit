@@ -20,6 +20,8 @@ if FORTRAN == "":
     print u" ex 1) $ export FC=gfortran"
     print u" ex 2) $ export FC=ifort"
     print u" ex 3) $ export FC=pgfortran"
+    print u" ex 4) $ export FC=f95"
+    print u" ex 5) $ export FC=g95"
     sys.exit()
 
 # fortran flags
@@ -35,8 +37,16 @@ elif FORTRAN == "pgfortran":
     FFLAG   = ['-m64','-Mfree','-Kieee','-O3','-fast','-Ktrap=none','-mp','-Minfo']
     DFLAG   = ['-m64','-Mfree','-Kieee','-O0','-mp','-Minfo','-Ktrap=fp','-Minform=inform','-Mbounds','-Mlre=noassoc']
 
+elif FORTRAN == "f95":
+    FFLAG   = ['-free','-fno-range-check','-O3'] # not supported OpenMP directive
+    DFLAG   = ['-free','-fno-range-check','-O0']
+
+elif FORTRAN == "g95":
+    FFLAG   = ['-ffree-form','-O3'] # not supported OpenMP directive
+    DFLAG   = ['-ffree-form','-O0','-fbounds-check','-Wall','-Wuninitialized','-ftrace=full','-pedantic','-std=f95']
+
 else:
-    print FORTRAN + u"is not supported on this SConstruct (for now)"
+    print FORTRAN + u" is not supported on this SConstruct (for now)"
     sys.exit()
 
 # debug
