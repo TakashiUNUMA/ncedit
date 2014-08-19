@@ -1806,7 +1806,7 @@ contains
     real :: th1,p1,t1,qv1,ql1,qi1,b1,pi1,thv1,qt,dp,dz,ps,frac
     real :: th2,p2,t2,qv2,ql2,qi2,b2,pi2,thv2
     real :: thlast,fliq,fice,tbar,qvbar,qlbar,qibar,lhv,lhs,lhf,rm,cpm
-    real*8 :: avgth,avgqv
+    real(8) :: avgth,avgqv
 !    real :: getqvl,getqvi,getthx,gettd ! comment out for compiling with gfortran
     real :: ee,psource,tsource,qvsource
 

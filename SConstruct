@@ -34,12 +34,12 @@ elif FORTRAN == "ifort":
     DFLAG   = ['-FR','-i-dynamic','-O0','-openmp','-warn all','-check all','-gen_interfaces','-fpe0','-ftrapuv']
 
 elif FORTRAN == "pgfortran":
-    FFLAG   = ['-m64','-Mfree','-Kieee','-O3','-fast','-Ktrap=none','-mp','-Minfo']
-    DFLAG   = ['-m64','-Mfree','-Kieee','-O0','-mp','-Minfo','-Ktrap=fp','-Minform=inform','-Mbounds','-Mlre=noassoc']
+    FFLAG   = ['-m64','-Mfree','-Kieee','-O3','-fast','-Ktrap=none','-mp']
+    DFLAG   = ['-m64','-Mfree','-Kieee','-O0','-mp','-Minfo','-Ktrap=fp','-Minform=inform','-Mbounds','-Mlre=noassoc','-Minfo']
 
 elif FORTRAN == "f95":
-    FFLAG   = ['-free','-fno-range-check','-O3'] # not supported OpenMP directive
-    DFLAG   = ['-free','-fno-range-check','-O0']
+    FFLAG   = ['-ffree-form','-fno-range-check','-O3','-ftree-vectorize','-funroll-loops','-fopenmp']
+    DFLAG   = ['-ffree-form','-fno-range-check','-O0','-fopenmp','-Wall','-Wuninitialized','-ffpe-trap=invalid,zero,overflow']
 
 elif FORTRAN == "g95":
     FFLAG   = ['-ffree-form','-O3'] # not supported OpenMP directive
