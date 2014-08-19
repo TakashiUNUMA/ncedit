@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/08/14
+! last modified: 2014/08/19
 !
 
 program ncedit
@@ -167,7 +167,7 @@ program ncedit
   allocate( x(imax) )
   call check( nf90_get_var(ncid, xdimid, x) )
   if(debug_level.ge.100) print *, "Success: get the x coordinate"
-  if(debug_level.ge.200) print *, " x(:)          = ", x
+  if(debug_level.ge.200) print *, " x(1:imax)          = ", x
 
   ! inquire and get y coordinate
   call check( nf90_inq_varid(ncid, 'nj', ydimid) )
@@ -179,7 +179,7 @@ program ncedit
   allocate( y(jmax) )
   call check( nf90_get_var(ncid, ydimid, y) )
   if(debug_level.ge.100) print *, "Success: get the y coordinate"
-  if(debug_level.ge.200) print *, " y(:)          = ", y
+  if(debug_level.ge.200) print *, " y(1:jmax)          = ", y
 
   ! inquire and get z coordinate
   call check( nf90_inq_varid(ncid, 'nk', zdimid) )
@@ -191,7 +191,7 @@ program ncedit
   allocate( z(kmax) )
   call check( nf90_get_var(ncid, zdimid, z) )
   if(debug_level.ge.100) print *, "Success: get the z coordinate"
-  if(debug_level.ge.200) print *, " z(:)          = ", z
+  if(debug_level.ge.200) print *, " z(1:kmax)          = ", z
 
   ! inquire and get time coordinate
   call check( nf90_inq_varid(ncid, 'time', tdimid) )
@@ -203,7 +203,7 @@ program ncedit
   allocate( time_in(tmax) )
   call check( nf90_get_var(ncid, tdimid, time_in) )
   if(debug_level.ge.100) print *, "Success: get the time coordinate"
-  if(debug_level.ge.200) print *, " time_in(:)    = ", time_in
+  if(debug_level.ge.200) print *, " time_in(1:tmax)    = ", time_in
   if(debug_level.ge.100) print *, ""
 
 
@@ -231,24 +231,45 @@ program ncedit
      tmp3(1:imax,1:jmax) = nan
   case (2)
      ! x-z
-     allocate( var_in(imax,1,kmax,1) ) ! xz
-     istart = (/ 1, yselect, 1, tselect /)
-     icount = (/ imax, 1, kmax, 1 /)
-     var_in(1:imax,1,1:kmax,1) = nan
-     allocate( tmp(imax,kmax) )
-     allocate( tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) )
-     allocate( tmp4(imax,kmax),tmp5(imax,kmax) )
-     tmp(1:imax,1:kmax) = nan
-     tmp1(1:imax,1:kmax) = nan
-     tmp2(1:imax,1:kmax) = nan
-     tmp3(1:imax,1:kmax) = nan
-     tmp4(1:imax,1:kmax) = nan
-     tmp5(1:imax,1:kmax) = nan
+     select case (varname)
+     case ('lwdt')
+        ! for calculation of LWDT in FT88
+        allocate( var_in(imax,1,kmax,2) ) ! xz
+        istart = (/ 1, yselect, 1, tselect /)
+        icount = (/ imax, 1, kmax, 2 /)
+        var_in(1:imax,1,1:kmax,1:2) = 0.
+        allocate( tmp(imax,kmax) )
+        tmp(1:imax,1:kmax) = 0.
+     case ('wadv')
+        ! for calculation of WADV in FT88
+        allocate( var_in(imax,1,kmax,1) ) ! xz
+        istart = (/ 1, yselect, 1, tselect /)
+        icount = (/ imax, 1, kmax, 1 /)
+        var_in(1:imax,1,1:kmax,1) = 0.
+        allocate( tmp(imax,kmax) )
+        tmp(1:imax,1:kmax) = 0.
+        allocate( tmp1(imax,kmax) )
+        tmp1(1:imax,1:kmax) = 0.
+     case default
+        allocate( var_in(imax,1,kmax,1) ) ! xz
+        istart = (/ 1, yselect, 1, tselect /)
+        icount = (/ imax, 1, kmax, 1 /)
+        var_in(1:imax,1,1:kmax,1) = nan
+        allocate( tmp(imax,kmax) )
+        allocate( tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) )
+        allocate( tmp4(imax,kmax),tmp5(imax,kmax) )
+        tmp(1:imax,1:kmax) = nan
+        tmp1(1:imax,1:kmax) = nan
+        tmp2(1:imax,1:kmax) = nan
+        tmp3(1:imax,1:kmax) = nan
+        tmp4(1:imax,1:kmax) = nan
+        tmp5(1:imax,1:kmax) = nan
+     end select
   case (3)
      ! x-t
      select case (varname)
      case ('cape','cin','lfc')
-        ! for calculating CAPE using getcape
+        ! for calculation of CAPE using getcape
         allocate( var_in(imax,1,kmax,tmax) ) ! xzt
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
@@ -711,6 +732,88 @@ program ncedit
         if(debug_level.ge.100) print *, " Done"
      end select
 
+  case ('lwdt')
+     ! Calculate as following variables:
+     !  - LWDT [-]
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     ! --- read winterp [m s-1]
+     call check( nf90_inq_varid(ncid, "winterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) ) ! the t in icount should be replaced with t+1 
+     if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1:2) = ", var_in(1,1,1,1:2)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k,tselect,time_in)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp(i,k) = (var_in(i,1,k,2) - var_in(i,1,k,1)) / real(time_in(tselect+1) - time_in(tselect))
+        end do
+        end do
+!$omp end parallel do
+        if(debug_level.ge.100) print *, " Done"
+     end select
+
+  case ('wadv')
+     ! Calculate as following variables:
+     !  - WADV [-]
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     ! --- read uinterp [m s-1]
+     call check( nf90_inq_varid(ncid, "uinterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (uinterp)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp1(i,k) = var_in(i,1,k,1)
+        end do
+        end do
+!$omp end parallel do
+        if(debug_level.ge.100) print *, " Done"
+     end select
+     ! --- read winterp [m s-1]
+     call check( nf90_inq_varid(ncid, "winterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!!! !$omp parallel do default(shared) &
+!!! !$omp private(i,k)
+        do k = 2, kmax-1, 1
+        do i = 2, imax-1, 1
+           tmp(i,k) = - tmp1(i,k) * ( (var_in(i+1,1,k,1) - var_in(i,1,k,1)) / real(x(i+1) - x(i)) ) &
+                      - var_in(i,1,k,1) * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) / real(z(k+1)-z(k)) )
+        end do
+        end do
+!!! !$omp end parallel do
+        if(debug_level.ge.100) print *, " Done"
+     end select
+
   case ('rws')
      ! wind speed that projected on the specified vertical cross section [m/s]
      ! *** this section work with flag = 5 ***
@@ -914,7 +1017,7 @@ program ncedit
 
      if(flag.eq.1) then
         ! x-y
-        if(debug_level.ge.100) print *, "x-y array"
+        if(debug_level.ge.0) print *, "x-y array"
         ! select one of the 2D array
         select case (varname)
         case ('thetae')
@@ -952,20 +1055,22 @@ program ncedit
         
      else if(flag.eq.2) then
         ! x-z
-        if(debug_level.ge.100) print *, "x-z array"
+        if(debug_level.ge.0) print *, "x-z array"
 
         ! select one of the 2D array
         select case (varname)
         case ('water')
-           print *, "The tmp array has already allocated"
-           if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
+           print *, "The tmp array has already allocated for ", trim(varname)
+           if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         case ('qc','qr','qi','qs','qg')
            tmp(:,:) = var_in(:,1,:,1)
-           if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
+           if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         case ('thetae')
-           print *, "The tmp array has already allocated"
+           print *, "The tmp array has already allocated for ", trim(varname)
+        case ('lwdt','wadv')
+           print *, "The tmp array has already allocated for ", trim(varname)
         case default
            tmp(:,:) = var_in(:,1,:,1)
         end select
@@ -989,7 +1094,18 @@ program ncedit
               iy(k) = (k-1)*dy
            end do
            if(debug_level.ge.200) print *, " iy(:)         = ", iy
-           
+
+           if(iy(ny).gt.z(kmax)) then
+              print *, ""
+              print *, "ERROR: iy(ny) exceeds z(kmax)"
+              print *, "        iy(ny)  = ", iy(ny)
+              print *, "        z(kmax) = ", z(kmax)
+              print *, "       iy(ny) should be smaller than or equal to z(kmax)"
+              print *, "*** Please reduce the values of ny or dy ***"
+              print *, ""
+              stop
+           end if
+
            select case (interp_method)
            case ('linear')
               ! z coordinate points are linearly interpolated by interp_linear
@@ -1022,7 +1138,7 @@ program ncedit
 
      else if (flag.eq.3) then
         ! x-t array
-        if(debug_level.ge.100) print *, "x-t array"
+        if(debug_level.ge.0) print *, "x-t array"
 
         ! ix
         if(interp_x.eq.1) then
@@ -1040,7 +1156,7 @@ program ncedit
 
         select case (varname)
         case ('rain')
-           if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
+           if(debug_level.ge.200) print *, " unit: [cm] -> [mm]"
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = var_in(i,1,t,1)*real(10.) ! unit: [cm] -> [mm]
@@ -1075,7 +1191,7 @@ program ncedit
 
      else if(flag.eq.5) then
         ! arvitrary cross-section
-        if(debug_level.ge.100) print *, "arvitrary cross-section"
+        if(debug_level.ge.0) print *, "arvitrary cross-section"
         ! ix and yy array
         ! create the coordinate that the user specified point and angle
         if( (xselect.lt.x(1)).or.(xselect.gt.x(imax)) ) then
@@ -1244,7 +1360,7 @@ program ncedit
      case (1)
         deallocate( x,y,z,time_in,var_in,tmp,tmp1,tmp2,tmp3 )
      case (2)
-        deallocate( x,y,z,time_in,var_in,tmp,tmp1,tmp2,tmp3,tmp4,tmp5 )
+        deallocate( x,y,z,time_in,var_in,tmp) !,tmp1,tmp2,tmp3,tmp4,tmp5 )
      case (3)
         deallocate( x,y,z,time_in,var_in,tmp )
      case (5)
