@@ -752,8 +752,7 @@ program ncedit
      end select
 
   case ('lwdt')
-     ! Calculate as following variables:
-     !  - LWDT [m s-2]
+     ! Calculate LWDT [m s-2], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -781,8 +780,7 @@ program ncedit
      end select
 
   case ('wadv')
-     ! Calculate as following variables:
-     !  - WADV [m s-2]
+     ! Calculate WADV [m s-2], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -819,20 +817,16 @@ program ncedit
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
-!!! !$omp parallel do default(shared) &
-!!! !$omp private(i,k)
         do k = 2, kmax-1, 1
         do i = 2, imax-1, 1
            tmp(i,k) = - tmp1(i,k) * ( (var_in(i+1,1,k,1) - var_in(i,1,k,1)) / real(x(i+1) - x(i)) ) &
                       - var_in(i,1,k,1) * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) / real(z(k+1)-z(k)) )
         end do
         end do
-!!! !$omp end parallel do
      end select
 
   case ('vpga')
-     ! Calculate as following variables:
-     !  - VPGA [m s-2]
+     ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -855,7 +849,6 @@ program ncedit
         do i = 1, imax, 1
            tmp1(i,k) = ivar_in(i,1,k,1)
         end do
-        if(debug_level.ge.200) print *, " th  = ", tmp1(xselect,k)
         end do
 !$omp end parallel do
      end select
@@ -876,7 +869,6 @@ program ncedit
         do i = 1, imax, 1
            tmp2(i,k) = ivar_in(i,1,k,1)
         end do
-        if(debug_level.ge.200) print *, " prs = ", tmp2(xselect,k)
         end do
 !$omp end parallel do
 !$omp parallel do default(shared) &
@@ -886,7 +878,6 @@ program ncedit
            tmp0 = thetaP_2_T( tmp1(i,k), tmp2(i,k) ) ! calculate temperature [K]
            tmp3(i,k) = TP_2_rho( tmp0, tmp2(i,k) ) ! calculate base state density [kg m-3]
         end do
-        if(debug_level.ge.200) print *, " tmp, rho = ", tmp0, tmp3(xselect,k)
         end do
 !$omp end parallel do
      end select
@@ -901,20 +892,19 @@ program ncedit
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
-!!! !$omp parallel do default(shared) &
-!!! !$omp private(i,k)
         do k = 2, kmax-1, 1
+!$omp parallel do default(shared) &
+!$omp private(i,k)
         do i = 1, imax, 1
-           tmp(i,k) = - (1/tmp3(i,k)) * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) / real(z(k+1) - z(k)) )
+           ! The unit of "prspert" is changed from [Pa] to [hPa]
+           tmp(i,k) = - (1/tmp3(i,k)) * ( ((var_in(i,1,k+1,1) - var_in(i,1,k,1))*0.01) / real(z(k+1) - z(k)) )
         end do
-        if(debug_level.ge.200) print *, " tmp(",xselect,",",k,") = ", tmp(xselect,k)
+!$omp end parallel do
         end do
-!!! !$omp end parallel do
      end select
 
   case ('buoy')
-     ! Calculate as following variables:
-     !  - BUOY [-]
+     ! Calculate BUOY [-], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
