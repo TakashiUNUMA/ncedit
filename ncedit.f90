@@ -28,7 +28,7 @@ program ncedit
   integer :: i, j, k, t, ipoint, nx, ny
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
   integer, dimension(2) :: ostart, ocount, dimids, chunks
-  integer, dimension(4) :: istart, icount
+  integer, dimension(4) :: istart, icount, iistart, iicount
   integer, dimension(2) :: ipoints
   real :: tmp0, tmpmax, tmpmin
   real :: gbcape, gbcin, gblclp, gblfcp, gblnbp, gblclz, gblfcz, gblnbz
@@ -36,6 +36,7 @@ program ncedit
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
   real, dimension(:,:,:),   allocatable :: tmpc1, tmpc2, tmpc3
+  real, dimension(:,:,:,:), allocatable :: ivar_in
   real, parameter :: pi = 3.14159265
   real, parameter :: t0 = 273.15
 
@@ -250,6 +251,24 @@ program ncedit
         tmp(1:imax,1:kmax) = 0.
         allocate( tmp1(imax,kmax) )
         tmp1(1:imax,1:kmax) = 0.
+     case ('vpga','buoy')
+        ! for calculations of VPGA and BUOY in FT88
+        allocate( var_in(imax,1,kmax,1) ) ! xz
+        istart = (/ 1, yselect, 1, tselect /)
+        icount = (/ imax, 1, kmax, 1 /)
+        var_in(1:imax,1,1:kmax,1) = 0.
+        allocate( ivar_in(imax,1,kmax,1) ) ! for base state (t = 1)
+        iistart = (/ 1, yselect, 1, 1 /)
+        iicount = (/ imax, 1, kmax, 1 /)
+        ivar_in(1:imax,1,1:kmax,1) = 0.
+        allocate( tmp(imax,kmax) )
+        tmp(1:imax,1:kmax) = 0.
+        allocate( tmp1(imax,kmax),tmp2(imax,kmax) )
+        allocate( tmp3(imax,kmax),tmp4(imax,kmax) )
+        tmp1(1:imax,1:kmax) = nan
+        tmp2(1:imax,1:kmax) = nan
+        tmp3(1:imax,1:kmax) = nan
+        tmp4(1:imax,1:kmax) = nan
      case default
         allocate( var_in(imax,1,kmax,1) ) ! xz
         istart = (/ 1, yselect, 1, tselect /)
@@ -734,7 +753,7 @@ program ncedit
 
   case ('lwdt')
      ! Calculate as following variables:
-     !  - LWDT [-]
+     !  - LWDT [m s-2]
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -746,7 +765,7 @@ program ncedit
      if(debug_level.ge.200) print *, " varid         = ", varid
      if(debug_level.ge.300) print *, "  istart       = ", istart
      if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) ) ! the t in icount should be replaced with t+1 
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1:2) = ", var_in(1,1,1,1:2)
      select case (flag)
@@ -759,12 +778,11 @@ program ncedit
         end do
         end do
 !$omp end parallel do
-        if(debug_level.ge.100) print *, " Done"
      end select
 
   case ('wadv')
      ! Calculate as following variables:
-     !  - WADV [-]
+     !  - WADV [m s-2]
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -789,7 +807,6 @@ program ncedit
         end do
         end do
 !$omp end parallel do
-        if(debug_level.ge.100) print *, " Done"
      end select
      ! --- read winterp [m s-1]
      call check( nf90_inq_varid(ncid, "winterp", varid) )
@@ -811,7 +828,137 @@ program ncedit
         end do
         end do
 !!! !$omp end parallel do
-        if(debug_level.ge.100) print *, " Done"
+     end select
+
+  case ('vpga')
+     ! Calculate as following variables:
+     !  - VPGA [m s-2]
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     ! --- read th [K]
+     call check( nf90_inq_varid(ncid, "th", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (th)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp1(i,k) = ivar_in(i,1,k,1)
+        end do
+        if(debug_level.ge.200) print *, " th  = ", tmp1(xselect,k)
+        end do
+!$omp end parallel do
+     end select
+     ! --- read prs [Pa]
+     call check( nf90_inq_varid(ncid, "prs", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (prs)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp2(i,k) = ivar_in(i,1,k,1)
+        end do
+        if(debug_level.ge.200) print *, " prs = ", tmp2(xselect,k)
+        end do
+!$omp end parallel do
+!$omp parallel do default(shared) &
+!$omp private(i,k,tmp0)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp0 = thetaP_2_T( tmp1(i,k), tmp2(i,k) ) ! calculate temperature [K]
+           tmp3(i,k) = TP_2_rho( tmp0, tmp2(i,k) ) ! calculate base state density [kg m-3]
+        end do
+        if(debug_level.ge.200) print *, " tmp, rho = ", tmp0, tmp3(xselect,k)
+        end do
+!$omp end parallel do
+     end select
+     ! --- read prspert [Pa]
+     call check( nf90_inq_varid(ncid, "prspert", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (prspert)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!!! !$omp parallel do default(shared) &
+!!! !$omp private(i,k)
+        do k = 2, kmax-1, 1
+        do i = 1, imax, 1
+           tmp(i,k) = - (1/tmp3(i,k)) * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) / real(z(k+1) - z(k)) )
+        end do
+        if(debug_level.ge.200) print *, " tmp(",xselect,",",k,") = ", tmp(xselect,k)
+        end do
+!!! !$omp end parallel do
+     end select
+
+  case ('buoy')
+     ! Calculate as following variables:
+     !  - BUOY [-]
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     ! --- read buoyancy [m s-2] (t=1)
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=1)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp1(i,k) = ivar_in(i,1,k,1)
+        end do
+        end do
+!$omp end parallel do
+     end select
+     ! --- read buoyancy [m s-2] (t=tselect)
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=tselect)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp(i,k) = var_in(i,1,k,1) - tmp1(i,k)
+        end do
+        end do
+!$omp end parallel do
      end select
 
   case ('rws')
@@ -1069,7 +1216,7 @@ program ncedit
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         case ('thetae')
            print *, "The tmp array has already allocated for ", trim(varname)
-        case ('lwdt','wadv')
+        case ('lwdt','wadv','vpga','buoy')
            print *, "The tmp array has already allocated for ", trim(varname)
         case default
            tmp(:,:) = var_in(:,1,:,1)
@@ -1718,6 +1865,16 @@ contains
     return
   end function thetaP_2_T
 
+  real function TP_2_rho(T,P)  ! 乾燥大気の状態方程式から, 温度と気圧を与えて密度を得る.
+    implicit none
+    real, intent(in) :: T    ! 大気の温度 [K]
+    real, intent(in) :: P    ! 大気の圧力 [Pa]
+    real, parameter :: Rd=287.0
+
+    TP_2_rho=P/(Rd*T)
+    
+    return
+  end function TP_2_rho
 
 !-----------------------------------------------------------------------
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
