@@ -770,7 +770,7 @@ program ncedit
      select case (flag)
      case (2)
 !$omp parallel do default(shared) &
-!$omp private(i,k,tselect,time_in)
+!$omp private(i,k,time_in)
         do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp(i,k) = (var_in(i,1,k,2) - var_in(i,1,k,1)) / real(time_in(tselect+1) - time_in(tselect))
