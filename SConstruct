@@ -26,34 +26,41 @@ if FORTRAN == "":
 
 # fortran flags
 if FORTRAN == "gfortran":
-    FFLAG   = ['-frecord-marker=4','-ffree-form','-fno-range-check','-O3','-ftree-vectorize','-funroll-loops','-fopenmp']
-    DFLAG   = ['-frecord-marker=4','-ffree-form','-fno-range-check','-O','-fopenmp','-fbounds-check','-Wall','-Wuninitialized','-ffpe-trap=invalid,zero,overflow']
+    OPT  = ['-frecord-marker=4','-ffree-form','-fno-range-check','-O3','-ftree-vectorize','-funroll-loops','-fopenmp']
+    OPT1 = ['-frecord-marker=4','-ffree-form','-fno-range-check','-O','-fbounds-check','-Wall','-Wuninitialized','-Wmaybe-uninitialized','-ffpe-trap=invalid,zero,overflow']
+    OPT2 = ['-frecord-marker=4','-ffree-form','-fno-range-check','-O','-fopenmp','-fbounds-check','-Wall','-Wuninitialized','-ffpe-trap=invalid,zero,overflow']
 
 elif FORTRAN == "ifort":
-    FFLAG   = ['-FR','-i-dynamic','-O3','-xHost','-fno-alias','-unroll0','-ipo','-openmp']
-    DFLAG   = ['-FR','-i-dynamic','-O0','-openmp','-warn all','-check all','-gen_interfaces','-fpe0','-ftrapuv']
+    OPT  = ['-FR','-i-dynamic','-O3','-xHost','-fno-alias','-unroll0','-ipo','-openmp']
+    OPT1 = ['-FR','-i-dynamic','-O0','-openmp','-W1','-C','-gen_interfaces','-fpe0','-ftrapuv']
+    OPT2 = ['-FR','-i-dynamic','-O0','-openmp','-W1','-C','-gen_interfaces','-fpe0','-ftrapuv']
 
 elif FORTRAN == "pgfortran":
-    FFLAG   = ['-m64','-Mfree','-Kieee','-O3','-fast','-Ktrap=none','-mp']
-    DFLAG   = ['-m64','-Mfree','-Kieee','-O0','-mp','-Minfo','-Ktrap=fp','-Minform=inform','-Mbounds','-Mlre=noassoc','-Minfo']
+    OPT  = ['-m64','-Mfree','-Kieee','-O3','-fast','-Ktrap=none','-mp']
+    OPT1 = ['-m64','-Mfree','-Kieee','-O0','-Ktrap=fp','-Minform=inform','-Mbounds','-Mlre=noassoc']
+    OPT2 = ['-m64','-Mfree','-Kieee','-O0','-mp','-Minfo','-Ktrap=fp','-Minform=inform','-Mbounds','-Mlre=noassoc']
 
 elif FORTRAN == "f95":
-    FFLAG   = ['-ffree-form','-fno-range-check','-O3','-ftree-vectorize','-funroll-loops','-fopenmp']
-    DFLAG   = ['-ffree-form','-fno-range-check','-O0','-fopenmp','-Wall','-Wuninitialized','-ffpe-trap=invalid,zero,overflow']
+    OPT  = ['-ffree-form','-fno-range-check','-O3','-ftree-vectorize','-funroll-loops','-fopenmp']
+    OPT1 = ['-ffree-form','-fno-range-check','-O0','-Wall','-Wuninitialized','-ffpe-trap=invalid,zero,overflow']
+    OPT2 = ['-ffree-form','-fno-range-check','-O0','-fopenmp','-Wall','-Wuninitialized','-ffpe-trap=invalid,zero,overflow']
 
 elif FORTRAN == "g95":
-    FFLAG   = ['-ffree-form','-O3'] # not supported OpenMP directive
-    DFLAG   = ['-ffree-form','-O0','-fbounds-check','-Wall','-Wuninitialized','-ftrace=full','-pedantic','-std=f95']
+    OPT  = ['-ffree-form','-O3'] # not supported OpenMP directive
+    OPT1 = ['-ffree-form','-O0','-fbounds-check','-Wall','-Wuninitialized','-ftrace=full','-pedantic','-std=f95']
+    OPT2 = OPT1 # As in OPT1 because there is no OpenMP flag in g95 compiler
 
 else:
-    print FORTRAN + u" is not supported on this SConstruct (for now)"
+    print u"Your specified compiler is not supported on this SConstruct (for now)"
     sys.exit()
 
-# debug
-if ARGUMENTS.get('debug', 0):
-    FFLAGS  = DFLAG
+# flags for debugging
+if ARGUMENTS.get('debug') == "1":
+    FFLAGS = OPT1 # without optimized flag and OpenMP flag
+elif ARGUMENTS.get('debug') == "2":
+    FFLAGS = OPT2 # with OpenMP flag but without optimized flag
 else:
-    FFLAGS  = FFLAG
+    FFLAGS = OPT  # with optimized flags and OpenMP flag
 
 # define library path
 NETCDF = os.environ.get('NETCDF')
