@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/08/19
+! last modified: 2014/09/12
 !
 
 program ncedit
@@ -309,6 +309,13 @@ program ncedit
         tmp1(1:imax,1:tmax) = nan
         tmp2(1:imax,1:tmax) = nan
         tmp3(1:imax,1:tmax) = nan
+        allocate( tmp(imax,tmax) )
+        tmp(1:imax,1:tmax) = nan
+     case ('xvort','yvort','zvort')
+        allocate( var_in(imax,1,1,tmax) ) ! xt
+        istart = (/ 1, yselect, zselect, 1 /)
+        icount = (/ imax, 1, 1, tmax /)
+        var_in(1:imax,1,1,1:tmax) = nan
         allocate( tmp(imax,tmax) )
         tmp(1:imax,1:tmax) = nan
      case default
