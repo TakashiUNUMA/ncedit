@@ -1321,6 +1321,14 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
+        case ('yvort')
+           if(debug_level.ge.200) print *, " unit: [s-1] -> [*10-2 s-2]"
+           do t = 1, tmax, 1
+           do i = 1, imax, 1
+              var_out(i,t) = var_in(i,1,t,1)*real(100.) ! unit: [s-1] -> [*10-2 s-2]
+           end do
+           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+           end do
         case default
 !!! !$omp parallel do default(shared) &
 !!! !$omp private(i,t)
