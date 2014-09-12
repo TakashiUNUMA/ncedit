@@ -59,32 +59,32 @@ program ncedit
   read(10,nml=param)
   close(unit=10)
 
-  if(debug_level.ge.100) print '(a30)',     "----- values on namelist -----"
-  if(debug_level.ge.100) print '(a18,i6)',  " imax          = ", imax
-  if(debug_level.ge.100) print '(a18,i6)',  " jmax          = ", jmax
-  if(debug_level.ge.100) print '(a18,i6)',  " kmax          = ", kmax
-  if(debug_level.ge.100) print '(a18,i6)',  " tmax          = ", tmax
-  if(debug_level.ge.100) print '(a18,a)',   " varname       = ", trim(varname)
-  if(debug_level.ge.100) print '(a18,a)',   " input         = ", trim(input)
-  if(debug_level.ge.100) print '(a18,i6)',  " xselect       = ", xselect
-  if(debug_level.ge.100) print '(a18,i6)',  " yselect       = ", yselect
-  if(debug_level.ge.100) print '(a18,i6)',  " zselect       = ", zselect
-  if(debug_level.ge.100) print '(a18,i6)',  " tselect       = ", tselect
-  if(debug_level.ge.100) print '(a18,a)',   " output        = ", trim(output)
-  if(debug_level.ge.100) print '(a18,a)',   " output_type   = ", trim(output_type)
-  if(debug_level.ge.100) print '(a18,i6)',  " flag          = ", flag
-  if(debug_level.ge.100) print '(a18,i6)',  "  nx           = ", nx
-  if(debug_level.ge.100) print '(a18,i6)',  "  ny           = ", ny
-  if(debug_level.ge.100) print '(a18,f6.3)',"  dx           = ", dx
-  if(debug_level.ge.100) print '(a18,f6.3)',"  dy           = ", dy
-  if(debug_level.ge.100) print '(a18,f6.2)',"  angle        = ", angle
-  if(debug_level.ge.100) print '(a18,i6)',  " interp_x      = ", interp_x
-  if(debug_level.ge.100) print '(a18,i6)',  " interp_y      = ", interp_y
-  if(debug_level.ge.100) print '(a18,a)',   " interp_method = ", trim(interp_method)
-  if(debug_level.ge.100) print '(a18,i6)',  " deflate_level = ", deflate_level
-  if(debug_level.ge.100) print '(a18,i6)',  " debug_level   = ", debug_level
-  if(debug_level.ge.100) print '(a30)',     "----- values on namelist -----"
-  if(debug_level.ge.100) print *, ""
+  print '(a30)',     "----- values on namelist -----"
+  print '(a18,i6)',  " imax          = ", imax
+  print '(a18,i6)',  " jmax          = ", jmax
+  print '(a18,i6)',  " kmax          = ", kmax
+  print '(a18,i6)',  " tmax          = ", tmax
+  print '(a18,a)',   " varname       = ", trim(varname)
+  print '(a18,a)',   " input         = ", trim(input)
+  print '(a18,i6)',  " xselect       = ", xselect
+  print '(a18,i6)',  " yselect       = ", yselect
+  print '(a18,i6)',  " zselect       = ", zselect
+  print '(a18,i6)',  " tselect       = ", tselect
+  print '(a18,a)',   " output        = ", trim(output)
+  print '(a18,a)',   " output_type   = ", trim(output_type)
+  print '(a18,i6)',  " flag          = ", flag
+  print '(a18,i6)',  "  nx           = ", nx
+  print '(a18,i6)',  "  ny           = ", ny
+  print '(a18,f6.3)',"  dx           = ", dx
+  print '(a18,f6.3)',"  dy           = ", dy
+  print '(a18,f6.2)',"  angle        = ", angle
+  print '(a18,i6)',  " interp_x      = ", interp_x
+  print '(a18,i6)',  " interp_y      = ", interp_y
+  print '(a18,a)',   " interp_method = ", trim(interp_method)
+  print '(a18,i6)',  " deflate_level = ", deflate_level
+  print '(a18,i6)',  " debug_level   = ", debug_level
+  print '(a30)',     "----- values on namelist -----"
+  print *, ""
 
 
   ! check run-time-errors
@@ -352,7 +352,7 @@ program ncedit
 
   
   ! inquire and get var
-  if(debug_level.ge.100) print *, "varname of ",trim(varname)," is selected"
+  print *, "varname of ",trim(varname)," is selected"
   select case (varname)
   case ('water')
      ! for all water (qc+qr+qi+qc+qg) on the microphysics processes
@@ -1161,7 +1161,7 @@ program ncedit
 
      if(flag.eq.1) then
         ! x-y
-        if(debug_level.ge.0) print *, "x-y array"
+        if(debug_level.ge.100) print *, "x-y array"
         ! select one of the 2D array
         select case (varname)
         case ('thetae')
@@ -1199,7 +1199,7 @@ program ncedit
         
      else if(flag.eq.2) then
         ! x-z
-        if(debug_level.ge.0) print *, "x-z array"
+        if(debug_level.ge.100) print *, "x-z array"
 
         ! select one of the 2D array
         select case (varname)
@@ -1278,11 +1278,11 @@ program ncedit
            ! use original data 
            var_out(:,:) = tmp(:,:)
         end if
-        if(debug_level.ge.100) print *, " var_out(",xselect,",:) = ", var_out(xselect,:)
+        if(debug_level.ge.200) print *, " var_out(",xselect,",:) = ", var_out(xselect,:)
 
      else if (flag.eq.3) then
         ! x-t array
-        if(debug_level.ge.0) print *, "x-t array"
+        if(debug_level.ge.100) print *, "x-t array"
 
         ! ix
         if(interp_x.eq.1) then
@@ -1443,7 +1443,7 @@ program ncedit
            ! use original data 
            var_out(:,:) = tmp(:,:)
         end if
-        if(debug_level.ge.100) print *, " var_out(",nx/2,",:) = ", var_out(nx/2,:)
+        if(debug_level.ge.200) print *, " var_out(",nx/2,",:) = ", var_out(nx/2,:)
 
      end if
      if(debug_level.ge.100) print *, ""
@@ -1522,7 +1522,7 @@ program ncedit
      if(debug_level.ge.100) print *, ""
 
   end if
-  if(debug_level.ge.100) print *, "All done."
+  print *, "All done."
 
 
 contains
