@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/09/12
+! last modified: 2014/09/13
 !
 
 program ncedit
@@ -327,13 +327,26 @@ program ncedit
         tmp(1:imax,1:tmax) = nan
      end select
   case (4)
-     ! a variable for time series
-     allocate( var_in(imax,jmax,tmax,1) ) ! xyt
-     istart = (/ 1, 1, 1, 1 /)
-     icount = (/ imax, jmax, tmax, 1 /)
-     var_in(1:imax,1:jmax,1:tmax,1) = nan
-     allocate( tmp(tmax,1) )
-     tmp(1:tmax,1) = nan
+     select case (varname)
+     case ('maxrain','apw','apm','aps','ape')
+        ! a variable for time series
+        allocate( var_in(imax,jmax,tmax,1) ) ! xyt
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, tmax, 1 /)
+        var_in(1:imax,1:jmax,1:tmax,1) = nan
+        allocate( tmp(tmax,1) )
+        tmp(1:tmax,1) = nan
+     case ('vtotwcave','vtotwcstd')
+        ! mean- and std-variables of the vertical profile of total water- and ice-phase mixing ratio
+        allocate( var_in(imax,jmax,1,tmax) ) ! xyt + z-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, 1, tmax /)
+        var_in(1:imax,1:jmax,1,1:tmax) = nan
+        allocate( tmp(tmax,1) )
+        tmp(1:tmax,1) = 0.
+        allocate( tmpi(imax,jmax,tmax) )
+        tmpi(1:imax,1:jmax,1:tmax) = 0.
+     end select
   case (5)
      ! arbitrary cross-section specifying (xselect,yselect) and angle
      allocate( var_in(imax,jmax,kmax,1) ) ! xyz
@@ -1096,6 +1109,151 @@ program ncedit
 !$omp end parallel do
      end select
 
+  case ('vtotwcave','vtotwcstd')
+     ! mean- and std-variables of the vertical profile of total water- and ice-phase mixing ratio
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, 1 /)
+        tmpi(:,:,:) = 0. 
+        ! --- read qc
+        call check( nf90_inq_varid(ncid, "qc", varid) )
+        if(debug_level.ge.100) print *, " Success: inquire the varid"
+        if(debug_level.ge.200) print *, "  varid         = ", varid
+        if(debug_level.ge.300) print *, "   istart       = ", istart
+        if(debug_level.ge.300) print *, "   icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.100) print *, " Success: get the var array"
+        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)              &
+!$omp reduction(+:tmpi)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = tmpi(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qr
+        call check( nf90_inq_varid(ncid, "qr", varid) )
+        if(debug_level.ge.100) print *, " Success: inquire the varid"
+        if(debug_level.ge.200) print *, "  varid         = ", varid
+        if(debug_level.ge.300) print *, "   istart       = ", istart
+        if(debug_level.ge.300) print *, "   icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.100) print *, " Success: get the var array"
+        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)              &
+!$omp reduction(+:tmpi)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = tmpi(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qi
+        call check( nf90_inq_varid(ncid, "qi", varid) )
+        if(debug_level.ge.100) print *, " Success: inquire the varid"
+        if(debug_level.ge.200) print *, "  varid         = ", varid
+        if(debug_level.ge.300) print *, "   istart       = ", istart
+        if(debug_level.ge.300) print *, "   icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.100) print *, " Success: get the var array"
+        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)              &
+!$omp reduction(+:tmpi)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = tmpi(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qs
+        call check( nf90_inq_varid(ncid, "qs", varid) )
+        if(debug_level.ge.100) print *, " Success: inquire the varid"
+        if(debug_level.ge.200) print *, "  varid         = ", varid
+        if(debug_level.ge.300) print *, "   istart       = ", istart
+        if(debug_level.ge.300) print *, "   icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.100) print *, " Success: get the var array"
+        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)              &
+!$omp reduction(+:tmpi)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = tmpi(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qg
+        call check( nf90_inq_varid(ncid, "qg", varid) )
+        if(debug_level.ge.100) print *, " Success: inquire the varid"
+        if(debug_level.ge.200) print *, "  varid         = ", varid
+        if(debug_level.ge.300) print *, "   istart       = ", istart
+        if(debug_level.ge.300) print *, "   icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.100) print *, " Success: get the var array"
+        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)              &
+!$omp reduction(+:tmpi)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = tmpi(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        select case (varname)
+        case ('vtotwcave')
+           ! calc. averaged value
+           tmp0 = 0.
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)              &
+!$omp reduction(+:tmp0)
+           do t = 1, tmax, 1
+           do j = 1, jmax, 1
+           do i = 1, imax, 1
+              tmp0 = tmp0 + tmpi(i,j,t)
+           end do
+           end do
+           end do
+!$omp end parallel do
+           tmp(k,1) = tmp0/real(imax*jmax*tmax) ! unit: [kg/kg]
+        case ('vtotwcstd')
+           print *, " under construction"
+           stop
+!!! !$omp parallel do default(shared) &
+!!! !$omp private(i,j,t)              &
+!!! !$omp reduction(+:tmp0)
+!        do t = 1, tmax, 1
+!        do j = 1, jmax, 1
+!        do i = 1, imax, 1
+!           tmp0 = tmp0 + (tmpi(i,j,t)-mean)**2
+!           tmp(k,1) = sqrt(tmp0/real(imax*jmax*tmax))
+!        end do
+!        end do
+!        end do
+!!! !$omp end parallel do
+        end select
+     end do ! end of k-loop
+
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
@@ -1125,16 +1283,26 @@ program ncedit
      ! Output 1D file
      ! The following variables are work with this option:
      !  "maxrain", "apw", "apm", "aps", "ape"
+     !  "vtotwcave", "vtotwcstd"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! create the file
      open(unit=20,file=output)
      if(debug_level.ge.100) print *, "Success: open the output file as ",trim(output)
      
      ! writeout data to output file
-     do t = 1, tmax, 1
-        write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
-        if(debug_level.ge.200) print 222, "t,time,var = ",t,real(time_in(t)/dble(60.)), tmp(t,1)
-     end do
+     select case (varname)
+     case ('maxrain','apw','apm','aps','ape')
+        do t = 1, tmax, 1
+           write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
+           if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
+        end do
+     case ('vtotwcave','vtotwcstd')
+        if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
+        do k = 1, kmax, 1
+           write(20,111) z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+           if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+        end do
+     end select
      if(debug_level.ge.100) print *, "Success: write out data to the output file"
      
      ! close the file
