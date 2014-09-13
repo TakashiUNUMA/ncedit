@@ -160,19 +160,22 @@ program ncedit
      end select
   end if
   if( flag.eq.4 ) then
-     select case (output_type)
-     case ('nc3','nc3_64bit','nc4')
-        print *, " Error: output_type is incorrect"
-        print *, "  output_type should be 'b6h' or 'a6h'"
-        stop
-     case ('b6h')
-        output = trim(varname)//"_"//trim(output_type)//".txt"
-        time_min = 121 ! referred to as 2h
-        time_max = 360 ! referred to as 6h
-     case ('a6h')
-        output = trim(varname)//"_"//trim(output_type)//".txt"
-        time_min = 361 ! referred to as 6h
-        time_max = 600 ! referred to as 10h
+     select case (varname)
+     case ('vtotwcave','vtotwcstd')
+        select case (output_type)
+        case ('nc3','nc3_64bit','nc4')
+           print *, " Error: output_type is incorrect"
+           print *, "  output_type should be 'b6h' or 'a6h'"
+           stop
+        case ('b6h')
+           output = trim(varname)//"_"//trim(output_type)//".txt"
+           time_min = 121 ! referred to as 2h
+           time_max = 360 ! referred to as 6h
+        case ('a6h')
+           output = trim(varname)//"_"//trim(output_type)//".txt"
+           time_min = 361 ! referred to as 6h
+           time_max = 600 ! referred to as 10h
+        end select
      end select
   end if
 
