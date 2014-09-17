@@ -1291,27 +1291,28 @@ program ncedit
         select case (varname)
         case ('vwmax')
            ! calc. max value
-           tmp0 = -1.e30
-!$omp parallel do default(shared)    &
-!$omp private(i,j,t)
+           tmp0   = 0.
            do t = time_min, time_max, 1
-           do j = 1, jmax, 1
-           do i = 1, imax, 1
-              if (tmpi(i,j,t).gt.tmp0) then
-                 tmp0 = tmpi(i,j,t)
-              end if
+              tmpmax = -1.e30
+              do j = 1, jmax, 1
+              do i = 1, imax, 1
+                 if (tmpi(i,j,t).gt.tmpmax) then
+                    tmpmax = tmpi(i,j,t)
+                 end if
+              end do
+              end do
+              tmp0 = tmp0 + tmpmax
            end do
-           end do
-           end do
-!$omp end parallel do
-           tmp(k,1) = tmp0 ! unit: [m/s]
+           tmp(k,1) = tmp0/real(time_max-time_min+1) ! unit: [m/s]
         case ('vwave')
            ! calc. mean value
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
            do i = 1, imax, 1
-              tmp0 = tmp0 + tmpi(i,j,t)
+              if (tmpi(i,j,t).gt.0.) then
+                 tmp0 = tmp0 + tmpi(i,j,t)
+              end if
            end do
            end do
            end do
