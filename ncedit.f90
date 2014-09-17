@@ -161,7 +161,7 @@ program ncedit
   end if
   if( flag.eq.4 ) then
      select case (varname)
-     case ('vtotwcave','vtotwcstd')
+     case ('vtotwcave','vtotwcstd','vwmax','vwave')
         select case (output_type)
         case ('nc3','nc3_64bit','nc4')
            print *, " Error: output_type is incorrect"
@@ -366,8 +366,9 @@ program ncedit
         var_in(1:imax,1:jmax,1:tmax,1) = nan
         allocate( tmp(tmax,1) )
         tmp(1:tmax,1) = nan
-     case ('vtotwcave','vtotwcstd')
-        ! mean- and std-variables of the vertical profile of total water- and ice-phase mixing ratio
+     case ('vtotwcave','vtotwcstd','vwmax','vwave')
+        ! mean/std values of the vertical profile of total water- and ice-phase mixing ratio
+        ! maximum/mean values of the vertical profile of updraft velocity
         allocate( var_in(imax,jmax,1,tmax) ) ! xyt + z-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, 1, tmax /)
@@ -1260,6 +1261,64 @@ program ncedit
         end select
      end do ! end of k-loop
 
+  case ('vwmax','vwave')
+     ! maximum- and mean-values of the vertical profile of updraft velocity
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, 1 /)
+        tmpi(:,:,:) = 0. 
+        ! --- read winterp
+        call check( nf90_inq_varid(ncid, "winterp", varid) )
+        if(debug_level.ge.200) print *, " Success: inquire the varid"
+        if(debug_level.ge.200) print *, "  varid         = ", varid
+        if(debug_level.ge.300) print *, "   istart       = ", istart
+        if(debug_level.ge.300) print *, "   icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, " Success: get the var array"
+        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+        select case (varname)
+        case ('vwmax')
+           ! calc. max value
+           tmp0 = -1.e30
+!$omp parallel do default(shared)    &
+!$omp private(i,j,t)
+           do t = time_min, time_max, 1
+           do j = 1, jmax, 1
+           do i = 1, imax, 1
+              if (tmpi(i,j,t).gt.tmp0) then
+                 tmp0 = tmpi(i,j,t)
+              end if
+           end do
+           end do
+           end do
+!$omp end parallel do
+           tmp(k,1) = tmp0 ! unit: [m/s]
+        case ('vwave')
+           ! calc. mean value
+           tmp0 = 0.
+           do t = time_min, time_max, 1
+           do j = 1, jmax, 1
+           do i = 1, imax, 1
+              tmp0 = tmp0 + tmpi(i,j,t)
+           end do
+           end do
+           end do
+           tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [m/s]
+        end select
+     end do ! end of k-loop
+
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
@@ -1289,7 +1348,7 @@ program ncedit
      ! Output 1D file
      ! The following variables are work with this option:
      !  "maxrain", "apw", "apm", "aps", "ape"
-     !  "vtotwcave", "vtotwcstd"
+     !  "vtotwcave", "vtotwcstd", "vwmax", "vwave"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! create the file
      open(unit=20,file=output)
@@ -1307,6 +1366,11 @@ program ncedit
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+        end do
+     case ('vwmax','vwave')
+        do k = 1, kmax, 1
+           write(20,111) z(k), tmp(k,1) ! unit: [m/s]
+           if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [m/s]
         end do
      end select
      if(debug_level.ge.100) print *, "Success: write out data to the output file"
