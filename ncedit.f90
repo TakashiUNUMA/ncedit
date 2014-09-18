@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/09/13
+! last modified: 2014/09/18
 !
 
 program ncedit
@@ -944,13 +944,10 @@ program ncedit
      select case (flag)
      case (2)
         do k = 2, kmax-1, 1
-!$omp parallel do default(shared) &
-!$omp private(i,k)
         do i = 1, imax, 1
            ! The unit of "prspert" is changed from [Pa] to [hPa]
            tmp(i,k) = - (1/tmp3(i,k)) * ( ((var_in(i,1,k+1,1) - var_in(i,1,k,1))*0.01) / real(z(k+1) - z(k)) )
         end do
-!$omp end parallel do
         end do
      end select
 
