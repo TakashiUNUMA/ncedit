@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/09/18
+! last modified: 2014/09/24
 !
 
 program ncedit
@@ -358,7 +358,7 @@ program ncedit
      end select
   case (4)
      select case (varname)
-     case ('maxrain','apw','apm','aps','ape')
+     case ('maxrain','averain','apw','apm','aps','ape')
         ! a variable for time series
         allocate( var_in(imax,jmax,tmax,1) ) ! xyt
         istart = (/ 1, 1, 1, 1 /)
@@ -802,8 +802,8 @@ program ncedit
         if(debug_level.ge.100) print *, " Done"
      end select
 
-  case ('lwdt')
-     ! Calculate LWDT [m s-2], which is proposed by Fovell and Tan (1988)
+  case ('lwdt') ! under construction ... 2014/09/18
+     ! Calculate LWDT [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -824,14 +824,14 @@ program ncedit
 !$omp private(i,k,time_in)
         do k = 1, kmax, 1
         do i = 1, imax, 1
-           tmp(i,k) = (var_in(i,1,k,2) - var_in(i,1,k,1)) / real(time_in(tselect+1) - time_in(tselect))
+           tmp(i,k) = (var_in(i,1,k,2) - var_in(i,1,k,1))
         end do
         end do
 !$omp end parallel do
      end select
 
-  case ('wadv')
-     ! Calculate WADV [m s-2], which is proposed by Fovell and Tan (1988)
+  case ('wadv') ! under construction ... 2014/09/18
+     ! Calculate WADV [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -870,14 +870,16 @@ program ncedit
      case (2)
         do k = 2, kmax-1, 1
         do i = 2, imax-1, 1
-           tmp(i,k) = - tmp1(i,k) * ( (var_in(i+1,1,k,1) - var_in(i,1,k,1)) / real(x(i+1) - x(i)) ) &
-                      - var_in(i,1,k,1) * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) / real(z(k+1)-z(k)) )
+           tmp(i,k) = - tmp1(i,k)                             &
+                      * (var_in(i+1,1,k,1) - var_in(i,1,k,1)) &
+                      - var_in(i,1,k,1)                       &
+                      * (var_in(i,1,k+1,1) - var_in(i,1,k,1))
         end do
         end do
      end select
 
-  case ('vpga')
-     ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1988)
+  case ('vpga') ! under construction ... 2014/09/18
+     ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, " flag = ", flag, "is under construction for now..."
@@ -945,13 +947,13 @@ program ncedit
      case (2)
         do k = 2, kmax-1, 1
         do i = 1, imax, 1
-           ! The unit of "prspert" is changed from [Pa] to [hPa]
-           tmp(i,k) = - (1/tmp3(i,k)) * ( ((var_in(i,1,k+1,1) - var_in(i,1,k,1))*0.01) / real(z(k+1) - z(k)) )
+           tmp(i,k) = - ( 1/tmp3(i,k) )                       &
+                      * (var_in(i,1,k+1,1) - var_in(i,1,k,1))
         end do
         end do
      end select
 
-  case ('buoy')
+  case ('buoy') ! under construction ... 2014/09/18
      ! Calculate BUOY [-], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
@@ -1083,6 +1085,56 @@ program ncedit
            tmp(t,1) = max(tmp(t,1),tmp0)
         end do
         end do
+        end do
+!$omp end parallel do
+     end select
+
+  case ('averain')
+     ! area-averaged rain rate [mm h^-1]
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, " flag = ", flag, "is under construction for now..."
+        stop
+     end if
+     ! --- read rain [cm]
+     call check( nf90_inq_varid(ncid, "rain", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (4)
+        ! for t = 1
+        tmp(1,1) = 0.0
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)              &
+!$omp reduction(+:tmp0,ipoint)
+        ! for t >= 2
+        do t = 2, tmax, 1
+           tmp0 = 0.
+           ipoint = 0
+           do j = 1, jmax, 1
+           do i = 1, imax, 1
+              ! unit [cm] -> [mm/h]
+              if ( ((var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.)).gt.0. ) then
+                 ! calculate the summation if the tmp0 is larger than 0. [mm/h]
+                 tmp0 = tmp0 + ((var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.))
+                 ! calculate the number of grid points (x-y) which satisfies this if section
+                 ipoint = ipoint + 1
+              else
+                 tmp0 = tmp0 + 0.
+              end if
+           end do
+           end do
+           if(debug_level.ge.200) print *, " t,tmp0,ipoint = ", t,tmp0,ipoint
+           if ( tmp0.gt.0. ) then
+              tmp(t,1) = tmp0/real(ipoint)
+           else
+              tmp(t,1) = 0.
+           end if
         end do
 !$omp end parallel do
      end select
@@ -1345,7 +1397,7 @@ program ncedit
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! Output 1D file
      ! The following variables are work with this option:
-     !  "maxrain", "apw", "apm", "aps", "ape"
+     !  "maxrain", "averain", "apw", "apm", "aps", "ape"
      !  "vtotwcave", "vtotwcstd", "vwmax", "vwave"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! create the file
@@ -1354,7 +1406,7 @@ program ncedit
      
      ! writeout data to output file
      select case (varname)
-     case ('maxrain','apw','apm','aps','ape')
+     case ('maxrain','averain','apw','apm','aps','ape')
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
