@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/09/24
+! last modified: 2014/09/28
 !
 
 program ncedit
@@ -348,6 +348,20 @@ program ncedit
         var_in(1:imax,1,1,1:tmax) = nan
         allocate( tmp(imax,tmax) )
         tmp(1:imax,1:tmax) = nan
+     case ('xtwater')
+        allocate( var_in(imax,1,1,tmax) ) ! xt
+        istart = (/ 1, yselect, zselect, 1 /)
+        icount = (/ imax, 1, 1, tmax /)
+        var_in(1:imax,1,1,1:tmax) = nan
+        allocate( tmp(imax,tmax) )
+        allocate( tmp1(imax,tmax),tmp2(imax,tmax),tmp3(imax,tmax) )
+        allocate( tmp4(imax,tmax),tmp5(imax,tmax) )
+        tmp(1:imax,1:tmax) = nan
+        tmp1(1:imax,1:tmax) = nan
+        tmp2(1:imax,1:tmax) = nan
+        tmp3(1:imax,1:tmax) = nan
+        tmp4(1:imax,1:tmax) = nan
+        tmp5(1:imax,1:tmax) = nan
      case default
         allocate( var_in(imax,1,tmax,1) )
         istart = (/ 1, yselect, 1, 1 /)
@@ -377,6 +391,9 @@ program ncedit
         tmp(1:tmax,1) = 0.
         allocate( tmpi(imax,jmax,tmax) )
         tmpi(1:imax,1:jmax,1:tmax) = 0.
+     case default
+        print *, "ERROR: Please define by yourself for ",trim(varname)," on this section"
+        stop 1
      end select
   case (5)
      ! arbitrary cross-section specifying (xselect,yselect) and angle
@@ -396,14 +413,14 @@ program ncedit
 
   
   ! inquire and get var
-  print *, "varname of ",trim(varname)," is selected"
+  print *, "varname (",trim(varname),") is selected"
   select case (varname)
-  case ('water')
-     ! for all water (qc+qr+qi+qc+qg) on the microphysics processes
-     ! *** this section work with flag = 2 only (for now) ***
-     if(flag.ne.2) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+  case ('water','xtwater')
+     ! The section for all water (qc+qr+qi+qc+qg) on the microphysics processes
+     ! *** this section work with flag = 2 and 3 only (for now) ***
+     if( (flag.ne.2).and.(flag.ne.3) ) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read qc
      call check( nf90_inq_varid(ncid, "qc", varid) )
@@ -412,7 +429,7 @@ program ncedit
      if(debug_level.ge.300) print *, "   istart       = ", istart
      if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, " Success: get the var array (qc)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
@@ -424,6 +441,15 @@ program ncedit
         end do
         end do
 !$omp end parallel do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp1(i,t) = var_in(i,1,1,t)
+        end do
+        end do
+!$omp end parallel do
      end select
      ! --- read qr
      call check( nf90_inq_varid(ncid, "qr", varid) )
@@ -432,7 +458,7 @@ program ncedit
      if(debug_level.ge.300) print *, "   istart       = ", istart
      if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, " Success: get the var array (qr)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
@@ -444,6 +470,15 @@ program ncedit
         end do
         end do
 !$omp end parallel do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp2(i,t) = var_in(i,1,1,t)
+        end do
+        end do
+!$omp end parallel do
      end select
      ! --- read qi
      call check( nf90_inq_varid(ncid, "qi", varid) )
@@ -452,7 +487,7 @@ program ncedit
      if(debug_level.ge.300) print *, "   istart       = ", istart
      if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, " Success: get the var array (qi)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
@@ -464,6 +499,15 @@ program ncedit
         end do
         end do
 !$omp end parallel do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp3(i,t) = var_in(i,1,1,t)
+        end do
+        end do
+!$omp end parallel do
      end select
      ! --- read qs
      call check( nf90_inq_varid(ncid, "qs", varid) )
@@ -472,7 +516,7 @@ program ncedit
      if(debug_level.ge.300) print *, "   istart       = ", istart
      if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, " Success: get the var array (qs)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
@@ -484,6 +528,15 @@ program ncedit
         end do
         end do
 !$omp end parallel do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp4(i,t) = var_in(i,1,1,t)
+        end do
+        end do
+!$omp end parallel do
      end select
      ! --- read qg
      call check( nf90_inq_varid(ncid, "qg", varid) )
@@ -492,7 +545,7 @@ program ncedit
      if(debug_level.ge.300) print *, "   istart       = ", istart
      if(debug_level.ge.300) print *, "   icount       = ", icount
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, " Success: get the var array"
+     if(debug_level.ge.100) print *, " Success: get the var array (qg)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
      case (2)
@@ -504,8 +557,18 @@ program ncedit
         end do
         end do
 !$omp end parallel do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp5(i,t) = var_in(i,1,1,t)
+        end do
+        end do
+!$omp end parallel do
      end select
      ! --- calculate water = qc + qr + qi + qs + qg [kg/kg]
+     if(debug_level.ge.200) print *, " Calculate water = qc + qr + qi + qs + qg"
      select case (flag)
      case (2)
 !$omp parallel do default(shared) &
@@ -516,14 +579,23 @@ program ncedit
         end do
         end do
 !$omp end parallel do
+     case (3)
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           tmp(i,t) = tmp1(i,t) + tmp2(i,t) + tmp3(i,t) + tmp4(i,t) + tmp5(i,t)
+        end do
+        end do
+!$omp end parallel do
      end select
 
   case ('thetae')
      ! equivalent potential temperature [K]
      ! *** this section work with flag = 1, 2, 3 or 5 ***
      if( flag.eq.4 ) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
@@ -688,8 +760,8 @@ program ncedit
      !  - lebel of free convection [hPa]
      ! *** this section work with flag = 3 only (for now) ***
      if(flag.ne.3) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
@@ -806,8 +878,8 @@ program ncedit
      ! Calculate LWDT [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read winterp [m s-1]
      call check( nf90_inq_varid(ncid, "winterp", varid) )
@@ -834,8 +906,8 @@ program ncedit
      ! Calculate WADV [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read uinterp [m s-1]
      call check( nf90_inq_varid(ncid, "uinterp", varid) )
@@ -882,8 +954,8 @@ program ncedit
      ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read th [K]
      call check( nf90_inq_varid(ncid, "th", varid) )
@@ -957,8 +1029,8 @@ program ncedit
      ! Calculate BUOY [-], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read buoyancy [m s-2] (t=1)
      call check( nf90_inq_varid(ncid, "buoyancy", varid) )
@@ -1005,8 +1077,8 @@ program ncedit
      ! wind speed that projected on the specified vertical cross section [m/s]
      ! *** this section work with flag = 5 ***
      if(flag.ne.5) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read uinterp [m/s]
      call check( nf90_inq_varid(ncid, "uinterp", varid) )
@@ -1059,8 +1131,8 @@ program ncedit
      ! maximum rain rate [mm h^-1]
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read rain [cm]
      call check( nf90_inq_varid(ncid, "rain", varid) )
@@ -1093,8 +1165,8 @@ program ncedit
      ! area-averaged rain rate [mm h^-1]
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      ! --- read rain [cm]
      call check( nf90_inq_varid(ncid, "rain", varid) )
@@ -1143,8 +1215,8 @@ program ncedit
      ! area of precipitation [km^2]
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      tmp(1:tmax,1) = 0. ! The tmp array is cleared with zero instend of nan
      ! --- read rain [cm]
@@ -1193,8 +1265,8 @@ program ncedit
      ! mean- and std-variables of the vertical profile of total water- and ice-phase mixing ratio
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      do k = 1, kmax, 1
         if(debug_level.ge.100) print *, " z = ", k
@@ -1314,8 +1386,8 @@ program ncedit
      ! maximum- and mean-values of the vertical profile of updraft velocity
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
-        print *, " flag = ", flag, "is under construction for now..."
-        stop
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
      end if
      do k = 1, kmax, 1
         if(debug_level.ge.100) print *, " z = ", k
@@ -1535,7 +1607,7 @@ program ncedit
               print *, "       iy(ny) should be smaller than or equal to z(kmax)"
               print *, "*** Please reduce the values of ny or dy ***"
               print *, ""
-              stop
+              stop 3
            end if
 
            select case (interp_method)
@@ -1617,6 +1689,14 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
+        case ('xtwater')
+           if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
+           do t = 1, tmax, 1
+           do i = 1, imax, 1
+              var_out(i,t) = tmp(i,t)*real(1000.)
+           end do
+           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+           end do
         case default
 !!! !$omp parallel do default(shared) &
 !!! !$omp private(i,t)
@@ -1636,11 +1716,11 @@ program ncedit
         ! create the coordinate that the user specified point and angle
         if( (xselect.lt.x(1)).or.(xselect.gt.x(imax)) ) then
            print *, "ERROR: xselect must be specified between x(1) and x(imax)"
-           stop
+           stop 3
         end if
         if( (yselect.lt.y(1)).or.(yselect.gt.y(jmax)) ) then
            print *, "ERROR: yselect must be specified between y(1) and y(imax)"
-           stop
+           stop 3
         end if
 
         tmp0 = abs((x(imax)*cos(angle*(pi/180.)))*2)/real(imax)
