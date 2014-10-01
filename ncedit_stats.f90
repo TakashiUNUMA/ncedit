@@ -1,7 +1,8 @@
 !
-! Program of ncedit_status.f90
+! N C E D I T (stats)
+!
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/07/10
+! Last modified: 2014/10/02
 !
 
 program ncedit_stats
@@ -11,7 +12,7 @@ program ncedit_stats
   implicit none
 
   integer :: tmax
-  real, dimension(:), allocatable :: time_in, var_in
+  real, dimension(:), allocatable :: time_in, var_in, var_in_tmp
   real, dimension(:), allocatable :: time_out, var_out
   character(len=20) :: varname
   character(len=42) :: input, output
@@ -45,8 +46,10 @@ program ncedit_stats
   ! allocate arrays
   allocate( time_in(tmax), var_in(tmax) )
   allocate( time_out(tmax), var_out(tmax) )
+  allocate( var_in_tmp(tmax) )
   time_in(:)  = nan
   var_in(:)   = nan
+  var_in_tmp(:) = nan
   time_out(:) = nan
   var_out(:)  = nan
 
@@ -68,13 +71,31 @@ program ncedit_stats
   if(debug_level.ge.100) print *, ""
   
   ! inquire and get var
-  if(debug_level.ge.100) print *, "varname of ",trim(varname)," is selected"
-  call check( nf90_inq_varid(ncid, varname, varid) )
-  if(debug_level.ge.100) print *, "Success: inquire the varid"
-  if(debug_level.ge.200) print *, " varid         = ", varid
-  call check( nf90_get_var(ncid, varid, var_in) )
-  if(debug_level.ge.100) print *, "Success: get the var array"
-  if(debug_level.ge.200) print *, " var_in(:)     = ", var_in
+  if(debug_level.ge.100) print *, "varname (",trim(varname),") is selected"
+  select case (varname)
+  case ('preeff')
+     call check( nf90_inq_varid(ncid, 'train', varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.200) print *, " var_in(:)     = ", var_in
+
+     call check( nf90_inq_varid(ncid, 'tcond', varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in_tmp) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.200) print *, " var_in_tmp(:) = ", var_in_tmp
+
+  case default
+     call check( nf90_inq_varid(ncid, varname, varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     call check( nf90_get_var(ncid, varid, var_in) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.200) print *, " var_in(:)     = ", var_in
+  end select
 
   ! close netcdf file
   call check( nf90_close(ncid) )
@@ -218,17 +239,38 @@ program ncedit_stats
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
-  ! case ('train')
-  !    if(debug_level.ge.100) print *, "output by time"
-  !    if(debug_level.ge.100) print *, " unit: [kg]"
-  !    do t = 1, tmax, 1
-  !       if(t.eq.1) then
-  !          var_out(t) = var_in(1)
-  !       else
-  !          var_out(t) = var_in(t) - var_in(t-1)
-  !       end if
-  !       if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
-  !    end do
+  case ('train')
+     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
+     do t = 1, tmax, 1
+        var_out(t) = var_in(t)/real(1.0d10)
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
+     end do
+
+  case ('tcond')
+     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
+     do t = 1, tmax, 1
+        var_out(t) = var_in(t)/real(1.0d10)
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
+     end do
+
+  case ('tevar')
+     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
+     do t = 1, tmax, 1
+        var_out(t) = var_in(t)/real(1.0d10)
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
+     end do
+
+  case ('preeff')
+     if(debug_level.ge.100) print *, "output as Precip. efficiency [%]"
+     do t = 1, tmax, 1
+        ! definition: Precip. dfficiency = total amount of rainfall / total amount of condensation
+        if ( (var_in(t).gt.0.).and.(var_in_tmp(t).gt.0.) ) then
+           var_out(t) = (var_in(t)/var_in_tmp(t))*real(1.0d2)
+        else
+           var_out(t) = 0.
+        end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
+     end do
 
   case default
      do t = 1, tmax, 1

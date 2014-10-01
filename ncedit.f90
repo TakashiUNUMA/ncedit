@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/09/28
+! last modified: 2014/09/30
 !
 
 program ncedit
@@ -153,7 +153,7 @@ program ncedit
   ! check the output format
   if( (flag.eq.1).or.(flag.eq.2).or.(flag.eq.3) ) then
      select case (output_type)
-     case ('b6h','a6h')
+     case ('b6h','a6h','all')
         print *, " Error: output_type is incorrect"
         print *, "  output_type should be 'nc3', 'nc3_64bit', or 'nc4'"
         stop
@@ -175,6 +175,10 @@ program ncedit
            output = trim(varname)//"_"//trim(output_type)//".txt"
            time_min = 361 ! referred to as 6h
            time_max = 600 ! referred to as 10h
+        case ('all')
+           output = trim(varname)//"_"//trim(output_type)//".txt"
+           time_min = 2   ! referred to as 0h
+           time_max = 721 ! referred to as 12h
         end select
      end select
   end if
