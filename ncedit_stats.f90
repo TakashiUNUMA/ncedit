@@ -234,36 +234,58 @@ program ncedit_stats
         if(var_out(t).lt.1.0d3) then
            var_out(t) = 0.
         else
-           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(10000.) ! unit: [kg] -> [* 10^-4 kg]
+           var_out(t) = ((var_in(t)-var_in(1))/dble(var_in(1)))*real(1.0d4) ! unit: [kg] -> [* 10^-4 kg]
         end if
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('train')
-     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
-     do t = 1, tmax, 1
-        var_out(t) = var_in(t)/real(1.0d10)
+!     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
+     var_out(1) = 0.
+     do t = 2, tmax, 1
+!        var_out(t) = var_in(t)/real(1.0d10)
+        var_out(t) = var_in(t)-var_in(t-1)
+        if(var_out(t).lt.1.0d0) then
+           var_out(t) = 0.
+        else
+           var_out(t) = (var_in(t) - var_in(t-1))/real(1.0d7) ! unit: [kg] -> [* 10^7 kg]
+        end if
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('tcond')
-     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
-     do t = 1, tmax, 1
-        var_out(t) = var_in(t)/real(1.0d10)
+!     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
+     var_out(1) = 0.
+     do t = 2, tmax, 1
+!        var_out(t) = var_in(t)/real(1.0d10)
+        var_out(t) = var_in(t)-var_in(t-1)
+        if(var_out(t).lt.1.0d0) then
+           var_out(t) = 0.
+        else
+           var_out(t) = (var_in(t) - var_in(t-1))/real(1.0d7) ! unit: [kg] -> [* 10^7 kg]
+        end if
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('tevar')
-     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
-     do t = 1, tmax, 1
-        var_out(t) = var_in(t)/real(1.0d10)
+!     if(debug_level.ge.100) print *, " unit: [kg] -> [* 10^10 kg]"
+     var_out(1) = 0.
+     do t = 2, tmax, 1
+!        var_out(t) = var_in(t)/real(1.0d10)
+        var_out(t) = var_in(t)-var_in(t-1)
+        if(var_out(t).lt.1.0d0) then
+           var_out(t) = 0.
+        else
+           var_out(t) = (var_in(t) - var_in(t-1))/real(1.0d7) ! unit: [kg] -> [* 10^7 kg]
+        end if
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
   case ('preeff')
      if(debug_level.ge.100) print *, "output as Precip. efficiency [%]"
      do t = 1, tmax, 1
-        ! definition: Precip. dfficiency = total amount of rainfall / total amount of condensation
+        ! Definition: Precip. dfficiency = total amount of rainfall / total amount of condensation
+        !  Reference: Weisman et al. 1997, MWR
         if ( (var_in(t).gt.0.).and.(var_in_tmp(t).gt.0.) ) then
            var_out(t) = (var_in(t)/var_in_tmp(t))*real(1.0d2)
         else
