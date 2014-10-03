@@ -1,0 +1,6 @@
+&param
+ tmax		    = 361
+ nparcel	    = 9
+ input		    = "cm1out_pdata.nc"
+ debug_level        = 200
+/
