@@ -91,6 +91,7 @@ program ncedit_pdata
   call check( nf90_get_var(ncid, varid, z, start = istart, count = icount ) )
   if(debug_level.ge.100) print *, " Success: get the var array (z)"
   if(debug_level.ge.200) print *, "  z(:,:) = ", z(:,:)
+  if(debug_level.ge.100) print *, ""
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -100,10 +101,10 @@ program ncedit_pdata
   do i = 1, nparcel, 1
      write (output, '("pdata_", i3.3, ".txt")') i
      open(20, file=output, status='replace')
-     if(debug_level.ge.100) print *, "Success: open the output file as ",trim(output)
+     if(debug_level.ge.100) print *, " Success: open the output file as ",trim(output)
      do t = 1, tmax, 1
-        write(20,111) time(t)/real(3600.), x(1,t)*0.001, z(1,t)*0.001
-        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time(t)/real(3600.),x(1,t)*0.001,z(1,t)*0.001
+        write(20,111) time(t)/real(3600.), x(i,t)*0.001, z(i,t)*0.001
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time(t)/real(3600.),x(i,t)*0.001,z(i,t)*0.001
      end do
      close(20)
   end do
