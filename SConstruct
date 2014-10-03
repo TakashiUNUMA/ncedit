@@ -3,7 +3,7 @@
 # SConstruct for ncedit.f90 and ncedit_stats.f90
 #
 # coded by Takashi Unuma, Kyoto Univ.
-# last modified: 2014/08/17
+# last modified: 2014/10/03
 #
 
 # load python modules
@@ -94,3 +94,6 @@ env.Program('ncedit.f90', LIBS=REQLIB, LIBPATH=LIBFLAG)
 
 # build ncedit_stats
 env.Program('ncedit_stats.f90', LIBS=REQLIB, LIBPATH=LIBFLAG)
+
+# build ncedit_pdata
+env.Program('ncedit_pdata.f90', LIBS=REQLIB, LIBPATH=LIBFLAG)

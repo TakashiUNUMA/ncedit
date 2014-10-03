@@ -1,6 +1,6 @@
 # ncedit
 
-__多次元 NetCDF ファイルから GMT で描画用の 2次元 NetCDF をはき出すプログラム__
+__多次元 NetCDF ファイルから GMT で描画用の 2次元 NetCDF，時系列データ，統計データを算出するプログラム__
 
 
 ## コンパイル
@@ -29,40 +29,36 @@ COMPILER=PGI
  $ make
 ```
 
-ncedit, ncedit_stats
+ncedit, ncedit_stats, ncedit_pdata
 
 というバイナリが作成されていたら OK 。
 
 
 ### SCons 編
 
-ライブラリの準備が整ったら、SConstruct を編集します。
-
-Intel, PGI, GNU fortran コンパイラのどれかを選択します (使用したいコンパイラの行をコメントアウトして下さい)。
-
-ここでは例として GNU コンパイラを選択します。
+ライブラリの準備が整ったら、以下の環境変数を適切に設定します．
 ```
-#COMPILER=INTEL
-COMPILER=GNU
-#COMPILER=PGI
+ $ export FC=gfortran
+ $ export NETCDF=/usr/local/netcdf
+ $ export HDF=/usr/local/hdf5
+ $ export ZLIB=/usr/local/zlib
 ```
-
 注意：使用するコンパイラは、コンパイル済みのライブラリで使用したコンパイラと一致している必要が有ります。
 
-
-編集が完了したらプログラムをコンパイルします。
+以上が完了したらプログラムをコンパイルします。
 ```
  $ scons
 ```
 
-ncedit, ncedit_stats
+ncedit, ncedit_stats, ncedit_pdata
 
 というバイナリが作成されていたら OK 。
 
 
 ## 使用方法
-namelist.ncedit または namelist.ncedit_stats を編集し、使用します。
+namelist.ncedit, namelist.ncedit_stats, namelist.ncedit_pdata を編集し、使用します。
 
+namelist.ncedt
 ```
 &param
  imax               = 256          ! x 方向の grid 数
@@ -185,6 +181,7 @@ ncedit.f90 は、
 
 
 # TODO
+- ncedit_pdata.f90 における次元情報取得方法の汎用化
 
 
 # MEMO
@@ -195,3 +192,4 @@ ncedit.f90 は、
 - import os として環境変数を読み込ませることで .bashrc 等で設定した環境変数を SConstruct に読み込ませることが可能
 - gfortran (ver. 4.4.6, 4.8.1), ifort (ver. 13.1.3, 14.0.2), pgfortran (ver. 12.10, 13.10) で動作確認済み
 - 環境変数 FC, NETCDF, HDF5, ZLIB を事前に設定して実行するように，仕様を変更 (環境変数の変更のみでコンパイル環境を変更出来るようにした)
+- ncedit_pdata.f90 を作成．
