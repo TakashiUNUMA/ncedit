@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/09/30
+! last modified: 2014/10/03
 !
 
 program ncedit
@@ -303,6 +303,18 @@ program ncedit
         tmp2(1:imax,1:kmax) = nan
         tmp3(1:imax,1:kmax) = nan
         tmp4(1:imax,1:kmax) = nan
+     case ('sruinterp','srvinterp')
+        ! for calculations of storm relative wind speed (wind speed - base state)
+        allocate( var_in(imax,1,kmax,1) ) ! xz
+        istart = (/ 1, yselect, 1, tselect /)
+        icount = (/ imax, 1, kmax, 1 /)
+        var_in(1:imax,1,1:kmax,1) = 0.
+        allocate( ivar_in(imax,1,kmax,1) ) ! for base state (t = 1)
+        iistart = (/ 1, yselect, 1, 1 /)
+        iicount = (/ imax, 1, kmax, 1 /)
+        ivar_in(1:imax,1,1:kmax,1) = 0.
+        allocate( tmp(imax,kmax) )
+        tmp(1:imax,1:kmax) = 0.
      case default
         allocate( var_in(imax,1,kmax,1) ) ! xz
         istart = (/ 1, yselect, 1, tselect /)
@@ -1077,6 +1089,80 @@ program ncedit
 !$omp end parallel do
      end select
 
+  case ('sruinterp')
+     ! Calculate storm relative wind speed for the u-component wind
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read uinterp [m s-1] (t=1)
+     call check( nf90_inq_varid(ncid, "uinterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (uinterp, t=1)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     ! --- read uinterp [m s-1] (t=tselect)
+     call check( nf90_inq_varid(ncid, "uinterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (uinterp, t=tselect)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp(i,k) = var_in(i,1,k,1) - ivar_in(i,1,k,1)
+        end do
+        end do
+!$omp end parallel do
+     end select
+
+  case ('srvinterp')
+     ! Calculate storm relative wind speed for the v-component wind
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read uinterp [m s-1] (t=1)
+     call check( nf90_inq_varid(ncid, "vinterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (vinterp, t=1)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     ! --- read uinterp [m s-1] (t=tselect)
+     call check( nf90_inq_varid(ncid, "vinterp", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (vinterp, t=tselect)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     select case (flag)
+     case (2)
+!$omp parallel do default(shared) &
+!$omp private(i,k)
+        do k = 1, kmax, 1
+        do i = 1, imax, 1
+           tmp(i,k) = var_in(i,1,k,1) - ivar_in(i,1,k,1)
+        end do
+        end do
+!$omp end parallel do
+     end select
+
   case ('rws')
      ! wind speed that projected on the specified vertical cross section [m/s]
      ! *** this section work with flag = 5 ***
@@ -1575,9 +1661,7 @@ program ncedit
            tmp(:,:) = var_in(:,1,:,1)
            if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
-        case ('thetae')
-           print *, "The tmp array has already allocated for ", trim(varname)
-        case ('lwdt','wadv','vpga','buoy')
+        case ('thetae','lwdt','wadv','vpga','buoy','sruinterp','srvinterp')
            print *, "The tmp array has already allocated for ", trim(varname)
         case default
            tmp(:,:) = var_in(:,1,:,1)
