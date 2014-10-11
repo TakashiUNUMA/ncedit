@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/10/11
+! last modified: 2014/10/12
 !
 
 program ncedit
@@ -154,18 +154,20 @@ program ncedit
   if( (flag.eq.1).or.(flag.eq.2).or.(flag.eq.3) ) then
      select case (output_type)
      case ('b6h','a6h','all')
-        print *, " Error: output_type is incorrect"
+        print *, " Error: the variable of output_type is incorrect"
         print *, "  output_type should be 'nc3', 'nc3_64bit', or 'nc4'"
         stop
      end select
   end if
   if( flag.eq.4 ) then
      select case (varname)
-     case ('vtotwcave','vtotwcstd','vwmax','vwave','vthetaeave','vthetaave','vqvave','vthetaeavec')
+     case ('vtotwcave','vtotwcstd','vwmax','vwave',         &
+           'vthetaeave','vthetaeavec','vthetaave','vqvave', &
+           'vrhave','vrhavec','vqvavec'                     )
         select case (output_type)
         case ('nc3','nc3_64bit','nc4')
-           print *, " Error: output_type is incorrect"
-           print *, "  output_type should be 'b6h' or 'a6h'"
+           print *, " Error: the variable of output_type is incorrect"
+           print *, "  output_type should be 'b6h', 'a6h', or 'all'"
            stop
         case ('b6h')
            output = trim(varname)//"_"//trim(output_type)//".txt"
@@ -399,7 +401,7 @@ program ncedit
         var_in(1:imax,1:jmax,1:tmax,1) = nan
         allocate( tmp(tmax,1) )
         tmp(1:tmax,1) = nan
-     case ('vtotwcave','vtotwcstd','vwmax','vwave','vthetaave','vqvave')
+     case ('vtotwcave','vtotwcstd','vwmax','vwave','vthetaave','vqvave','vqvavec')
         ! mean/std values of the vertical profile of total water- and ice-phase mixing ratio
         ! maximum/mean values of the vertical profile of updraft velocity
         ! mean values of the vertical profile of theta and water vapor mixing ratio
@@ -411,8 +413,9 @@ program ncedit
         tmp(1:kmax,1) = 0.
         allocate( tmpi(imax,jmax,tmax) )
         tmpi(1:imax,1:jmax,1:tmax) = 0.
-     case ('vthetaeave','vthetaeavec')
-        ! A mean value of the vertical profile of theta-e
+     case ('vthetaeave','vthetaeavec','vrhave','vrhavec')
+        ! A mean value of the vertical profile of theta-e and that inside of clouds
+        ! mean values of the vertical profile of relative humidity and that inside of clouds
         allocate( var_in(imax,jmax,1,tmax) ) ! xyt + z-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, 1, tmax /)
@@ -426,7 +429,7 @@ program ncedit
         tmpi2(1:imax,1:jmax,1:tmax) = 0.
         tmpi3(1:imax,1:jmax,1:tmax) = 0.
      case ('tthetaeave')
-        ! Area-averaged value of theta-e
+        ! Time series of the area-averaged value of theta-e
         allocate( var_in(imax,jmax,1,tmax) ) ! xyt + z-loop
         istart = (/ 1, 1, zselect, 1 /)
         icount = (/ imax, jmax, 1, tmax /)
@@ -440,7 +443,7 @@ program ncedit
         tmpi2(1:imax,1:jmax,1:tmax) = 0.
         tmpi3(1:imax,1:jmax,1:tmax) = 0.
      case ('tqvave')
-        ! Area-averaged value of qv
+        ! time series of the area-averaged value of qv
         allocate( var_in(imax,jmax,1,tmax) ) ! xyt + z-loop
         istart = (/ 1, 1, zselect, 1 /)
         icount = (/ imax, jmax, 1, tmax /)
@@ -449,6 +452,18 @@ program ncedit
         tmp(1:tmax,1) = 0.
         allocate( tmpi(imax,jmax,tmax) )
         tmpi(1:imax,1:jmax,1:tmax) = 0.
+     case ('tcapeave','tcinave','tlfcave')
+        ! for calculation of CAPE using getcape
+        allocate( var_in(imax,1,kmax,tmax) ) ! xzt
+        istart = (/ 1, yselect, 1, 1 /)
+        icount = (/ imax, 1, kmax, tmax /)
+        var_in(1:imax,1,1:kmax,1:tmax) = nan
+        allocate( tmpc1(imax,kmax,tmax),tmpc2(imax,kmax,tmax),tmpc3(imax,kmax,tmax) )
+        tmpc1(1:imax,1:kmax,1:tmax) = 0.
+        tmpc2(1:imax,1:kmax,1:tmax) = 0.
+        tmpc3(1:imax,1:kmax,1:tmax) = 0.
+        allocate( tmp(tmax,1) )
+        tmp(1:tmax,1) = 0.
      case default
         print *, "ERROR: Please define by yourself for ",trim(varname)," on this section"
         stop 1
@@ -813,7 +828,7 @@ program ncedit
 
   case ('cape','cin','lfc')
      ! Calculate as following variables:
-     !  - convective available potential energy [J kg-1]
+     !  - 500 m mixed-layer convective available potential energy (mlCAPE) [J kg-1]
      !  - convective inhibition [J kg-1]
      !  - lebel of free convection [hPa]
      ! *** this section work with flag = 3 only (for now) ***
@@ -896,7 +911,7 @@ program ncedit
 !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
-              CALL getcape( 2,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),tmp(i,t), &
+              CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),tmp(i,t), &
                    gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
            end do
            if(debug_level.ge.200) print *, "  t,cape = ",t,tmp(xselect,t)
@@ -908,7 +923,7 @@ program ncedit
 !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
-              CALL getcape( 2,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
+              CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
                    tmp(i,t),gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
            end do
            if(debug_level.ge.200) print *, "  t,cin = ",t,tmp(xselect,t)
@@ -921,7 +936,7 @@ program ncedit
 !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
-              CALL getcape( 2,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
+              CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
                    gbcin,gblclp,gblfcp,gblnbp,gblclz,tmp(i,t),gblnbz,debug_level,1  ) ! unit: [m]
 !                   gbcin,gblclp,tmp(i,t),gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  ) ! unit: [Pa]
            end do
@@ -948,17 +963,14 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1:2) = ", var_in(1,1,1,1:2)
-     select case (flag)
-     case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k,time_in)
-        do k = 1, kmax, 1
+     do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp(i,k) = (var_in(i,1,k,2) - var_in(i,1,k,1)) !/real(time_in()-time_in())
         end do
-        end do
+     end do
 !$omp end parallel do
-     end select
 
   case ('wadv') ! under construction ... 2014/09/18
      ! Calculate WADV [m s-2], which is proposed by Fovell and Tan (1998)
@@ -976,17 +988,14 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (uinterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     select case (flag)
-     case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
-        do k = 1, kmax, 1
+     do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp1(i,k) = var_in(i,1,k,1)
         end do
-        end do
+     end do
 !$omp end parallel do
-     end select
      ! --- read winterp [m s-1]
      call check( nf90_inq_varid(ncid, "winterp", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -996,17 +1005,14 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     select case (flag)
-     case (2)
-        do k = 2, kmax-1, 1
+     do k = 2, kmax-1, 1
         do i = 2, imax-1, 1
            tmp(i,k) = - tmp1(i,k)                             &
                       * (var_in(i+1,1,k,1) - var_in(i,1,k,1)) &
                       - var_in(i,1,k,1)                       &
                       * (var_in(i,1,k+1,1) - var_in(i,1,k,1))
         end do
-        end do
-     end select
+     end do
 
   case ('vpga') ! under construction ... 2014/09/18
      ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1998)
@@ -1024,17 +1030,14 @@ program ncedit
      call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (th)"
      if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
-     select case (flag)
-     case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
-        do k = 1, kmax, 1
+     do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp1(i,k) = ivar_in(i,1,k,1)
         end do
-        end do
+     end do
 !$omp end parallel do
-     end select
      ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1044,26 +1047,23 @@ program ncedit
      call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (prs)"
      if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
-     select case (flag)
-     case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
-        do k = 1, kmax, 1
+     do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp2(i,k) = ivar_in(i,1,k,1)
         end do
-        end do
+     end do
 !$omp end parallel do
 !$omp parallel do default(shared) &
 !$omp private(i,k,tmp0)
-        do k = 1, kmax, 1
+     do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp0 = thetaP_2_T( tmp1(i,k), tmp2(i,k) ) ! calculate temperature [K]
            tmp3(i,k) = TP_2_rho( tmp0, tmp2(i,k) ) ! calculate base state density [kg m-3]
         end do
-        end do
+     end do
 !$omp end parallel do
-     end select
      ! --- read prspert [Pa]
      call check( nf90_inq_varid(ncid, "prspert", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1073,15 +1073,12 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (prspert)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     select case (flag)
-     case (2)
-        do k = 2, kmax-1, 1
+     do k = 2, kmax-1, 1
         do i = 1, imax, 1
            tmp(i,k) = - ( 1/tmp3(i,k) )                       &
                       * (var_in(i,1,k+1,1) - var_in(i,1,k,1))
         end do
-        end do
-     end select
+     end do
 
   case ('buoy') ! under construction ... 2014/09/18
      ! Calculate BUOY [-], which is proposed by Fovell and Tan (1988)
@@ -1099,17 +1096,14 @@ program ncedit
      call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=1)"
      if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
-     select case (flag)
-     case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
-        do k = 1, kmax, 1
+     do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp1(i,k) = ivar_in(i,1,k,1)
         end do
-        end do
+     end do
 !$omp end parallel do
-     end select
      ! --- read buoyancy [m s-2] (t=tselect)
      call check( nf90_inq_varid(ncid, "buoyancy", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1119,17 +1113,14 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=tselect)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     select case (flag)
-     case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
-        do k = 1, kmax, 1
+     do k = 1, kmax, 1
         do i = 1, imax, 1
            tmp(i,k) = var_in(i,1,k,1) - tmp1(i,k)
         end do
-        end do
+     end do
 !$omp end parallel do
-     end select
 
   case ('sruinterp')
      ! Calculate storm relative wind speed for the u-component wind
@@ -1672,6 +1663,69 @@ program ncedit
         tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [m/s]
      end do ! end of k-loop
 
+  case ('vqvavec')
+     ! A mean-value of the vertical profile of water vapor mixing ratio
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     if(time_min.eq.nan) then
+        print *, "ERROR: please define the values both time_min and time_max"
+        stop 21
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, 1 /)
+        tmpi(:,:,:) = 0. 
+        ! --- read qv [kg/kg]
+        call check( nf90_inq_varid(ncid, "qv", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qc [kg/kg]
+        call check( nf90_inq_varid(ncid, "qc", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qc)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ! calc. mean value
+        ipoint = 0
+        tmp0 = 0.
+        do t = time_min, time_max, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           if(var_in(i,j,1,t).gt.0.) then
+              tmp0 = tmp0 + tmpi(i,j,t)
+              ipoint = ipoint + 1
+           end if
+        end do
+        end do
+        end do
+        if ( ipoint.gt.0. ) then
+           tmp(k,1) = tmp0/real(ipoint)
+        else
+           tmp(k,1) = 0.
+        end if
+     end do ! end of k-loop
+
   case ('vthetaeave')
      ! A mean-value of the vertical profile of theta-e
      ! *** this section work with flag = 4 ***
@@ -1759,7 +1813,6 @@ program ncedit
         end do
         end do
         end do
-        if(debug_level.ge.200) print *, " t,tmp0,ipoint = ", t,tmp0,ipoint
         if ( ipoint.gt.0. ) then
            tmp(k,1) = tmp0/real(ipoint)
         else
@@ -1848,7 +1901,7 @@ program ncedit
         if(debug_level.ge.300) print *, "  istart       = ", istart
         if(debug_level.ge.300) print *, "  icount       = ", icount
         call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
+        if(debug_level.ge.200) print *, "Success: get the var array (qc)"
         if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
         ! calc. mean value
         ipoint = 0
@@ -1863,7 +1916,203 @@ program ncedit
         end do
         end do
         end do
-        if(debug_level.ge.200) print *, " t,tmp0,ipoint = ", t,tmp0,ipoint
+        if ( ipoint.gt.0. ) then
+           tmp(k,1) = tmp0/real(ipoint)
+        else
+           tmp(k,1) = 0.
+        end if
+     end do ! end of k-loop
+
+  case ('vrhave')
+     ! A mean-value of the vertical profile of relative humidity
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     if(time_min.eq.nan) then
+        print *, "ERROR: please define the values both time_min and time_max"
+        stop 21
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, 1 /)
+        tmpi(:,:,:) = 0. 
+        ! --- read prs [Pa]
+        call check( nf90_inq_varid(ncid, "prs", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi1(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read theta [K]
+        call check( nf90_inq_varid(ncid, "th", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (th)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi2(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qv [kg/kg]
+        call check( nf90_inq_varid(ncid, "qv", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t,tmp0)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi3(i,j,t) = var_in(i,j,1,t)
+           tmp0 = thetaP_2_T( tmpi2(i,j,t), tmpi1(i,j,t) )
+           tmpi(i,j,t) = qvTP_2_RH( tmpi3(i,j,t), tmp0, tmpi1(i,j,t) )
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! calc. mean value
+        ipoint = 0
+        tmp0 = 0.
+        do t = time_min, time_max, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           if (tmpi(i,j,t).gt.0.) then
+              tmp0 = tmp0 + tmpi(i,j,t)
+              ipoint = ipoint + 1
+           end if
+        end do
+        end do
+        end do
+        if ( ipoint.gt.0. ) then
+           tmp(k,1) = tmp0/real(ipoint)
+        else
+           tmp(k,1) = 0.
+        end if
+     end do ! end of k-loop
+
+  case ('vrhavec')
+     ! A mean-value of the vertical profile of relative humidity inside of convective clouds
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     if(time_min.eq.nan) then
+        print *, "ERROR: please define the values both time_min and time_max"
+        stop 21
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, 1 /)
+        tmpi(:,:,:) = 0. 
+        ! --- read prs [Pa]
+        call check( nf90_inq_varid(ncid, "prs", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi1(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read theta [K]
+        call check( nf90_inq_varid(ncid, "th", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (th)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi2(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qv [kg/kg]
+        call check( nf90_inq_varid(ncid, "qv", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t,tmp0)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi3(i,j,t) = var_in(i,j,1,t)
+           tmp0 = thetaP_2_T( tmpi2(i,j,t), tmpi1(i,j,t) )
+           tmpi(i,j,t) = qvTP_2_RH( tmpi3(i,j,t), tmp0, tmpi1(i,j,t) )
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qc [kg/kg]
+        call check( nf90_inq_varid(ncid, "qc", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qc)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ! calc. mean value
+        ipoint = 0
+        tmp0 = 0.
+        do t = time_min, time_max, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           if (var_in(i,j,1,t).gt.0.) then
+              tmp0 = tmp0 + tmpi(i,j,t)
+              ipoint = ipoint + 1
+           end if
+        end do
+        end do
+        end do
         if ( ipoint.gt.0. ) then
            tmp(k,1) = tmp0/real(ipoint)
         else
@@ -1998,6 +2247,116 @@ program ncedit
         end if
      end do ! end of t-loop
 
+  case ('tcapeave','tcinave','tlfcave')
+     ! Calculate as following variables:
+     !  - convective available potential energy [J kg-1]
+     !  - convective inhibition [J kg-1]
+     !  - lebel of free convection [hPa]
+     ! *** this section work with flag = 4 only (for now) ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read prs [Pa]
+     call check( nf90_inq_varid(ncid, "prs", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (prs)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpc1(i,k,t) = var_in(i,1,k,t)*real(0.01) ! unit: [hPa]
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read theta [K]
+     call check( nf90_inq_varid(ncid, "th", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (th)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,k,t,tmp0)
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp0 = var_in(i,1,k,t)
+        ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+        tmpc2(i,k,t) = thetaP_2_T( tmp0, tmpc1(i,k,t)*100. ) - t0 ! unit: [degree C]
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read qv [kg/kg]
+     call check( nf90_inq_varid(ncid, "qv", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (qv)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpc3(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! calculate CAPE, CIN or LFC
+!$omp parallel do default(shared)      &
+!$omp private(i,t,gbcape,gbcin,gblfcz) &
+!$omp reduction(+:tmp0,ipoint)
+     do t = 1, tmax, 1
+        ipoint = 0
+        tmp0 = 0.
+        do i = 1, imax, 1
+           gbcape = 0.
+           gbcin = 0.
+           gblfcz = 0.
+           ! calc. mixed-layer (500 m) CAPE
+           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape, &
+                gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  )
+           select case (varname)
+           case ('tcapeave')
+              if(gbcape.gt.0.) then
+                 tmp0 = tmp0 + gbcape
+                 ipoint = ipoint + 1
+              end if
+           case ('tcinave')
+              if(gbcin.gt.0.) then
+                 tmp0 = tmp0 + gbcin
+                 ipoint = ipoint + 1
+              end if
+           case ('tlfcave')
+              if(gblfcz.gt.0.) then
+                 tmp0 = tmp0 + gblfcz
+                 ipoint = ipoint + 1
+              end if
+           end select
+        end do
+        if(ipoint.gt.0) then
+           tmp(t,1) = tmp0/real(ipoint)
+        else
+           tmp(t,1) = 0.
+        end if
+        if(debug_level.ge.100) print *, "  t,",trim(varname)," = ",t,tmp(t,1)
+     end do
+!$omp end parallel do
+
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
@@ -2035,12 +2394,12 @@ program ncedit
      
      ! writeout data to output file
      select case (varname)
-     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave')
+     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tconave','tlfcave')
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
         end do
-     case ('vtotwcave','vtotwcstd','vqvave')
+     case ('vtotwcave','vtotwcstd','vqvave','vqvavec')
         if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
@@ -2051,10 +2410,10 @@ program ncedit
            write(20,111) z(k), tmp(k,1) ! unit: [m/s]
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [m/s]
         end do
-     case ('vthetaeave','vthetaave','vthetaeavec')
+     case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec')
         do k = 1, kmax, 1
-           write(20,111) z(k), tmp(k,1) ! unit: [K]
-           if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [K]
+           write(20,111) z(k), tmp(k,1)
+           if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)
         end do
      end select
      if(debug_level.ge.100) print *, "Success: write out data to the output file"
@@ -2808,6 +3167,33 @@ contains
     
     return
   end function TP_2_rho
+
+  real function eT_2_RH(e,T)  ! 水蒸気圧と温度から相対湿度を計算する
+    ! $RH=(e/es)\times 100$ という定義から計算.
+    implicit none
+    real, intent(in) :: e  ! 水蒸気圧 [Pa]
+    real, intent(in) :: T  ! 温度 [K]
+    real :: es
+    
+    es=es_Bolton(T)
+    eT_2_RH=100.0*e/es
+    
+    return
+  end function eT_2_RH
+
+  real function qvTP_2_RH(qv,T,P)  ! 混合比と温度から相対湿度を計算する.
+    ! qvP_2_e から水蒸気圧を計算し, 相対湿度の定義を用いる.
+    implicit none
+    real, intent(in) :: qv  ! 相対湿度 [kg / kg]
+    real, intent(in) :: T   ! 温度 [K]
+    real, intent(in) :: P   ! 全圧 [Pa]
+    real :: e
+    
+    e=qvP_2_e(qv,P)
+    qvTP_2_RH=eT_2_RH(e,T)
+    
+    return
+  end function qvTP_2_RH
 
 !-----------------------------------------------------------------------
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
