@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/10/12
+! last modified: 2014/10/28
 !
 
 program ncedit
@@ -265,10 +265,13 @@ program ncedit
      end select
      allocate( tmp(imax,jmax) )
      allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax) )
+     allocate( tmp4(imax,jmax),tmp5(imax,jmax) )
      tmp(1:imax,1:jmax) = nan
      tmp1(1:imax,1:jmax) = nan
      tmp2(1:imax,1:jmax) = nan
      tmp3(1:imax,1:jmax) = nan
+     tmp4(1:imax,1:jmax) = nan
+     tmp5(1:imax,1:jmax) = nan
   case (2)
      ! x-z
      select case (varname)
@@ -490,8 +493,8 @@ program ncedit
   select case (varname)
   case ('water','xtwater')
      ! The section for all water (qc+qr+qi+qc+qg) on the microphysics processes
-     ! *** this section work with flag = 2 and 3 only (for now) ***
-     if( (flag.ne.2).and.(flag.ne.3) ) then
+     ! *** this section work with flag = 1, 2 and 3 only (for now) ***
+     if( (flag.ne.1).and.(flag.ne.2).and.(flag.ne.3) ) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
         stop 2
      end if
@@ -505,6 +508,15 @@ program ncedit
      if(debug_level.ge.100) print *, " Success: get the var array (qc)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
+     case (1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -534,6 +546,15 @@ program ncedit
      if(debug_level.ge.100) print *, " Success: get the var array (qr)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
+     case (1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -563,6 +584,15 @@ program ncedit
      if(debug_level.ge.100) print *, " Success: get the var array (qi)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
+     case (1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -592,6 +622,15 @@ program ncedit
      if(debug_level.ge.100) print *, " Success: get the var array (qs)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
+     case (1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp4(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -621,6 +660,15 @@ program ncedit
      if(debug_level.ge.100) print *, " Success: get the var array (qg)"
      if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
      select case (flag)
+     case (1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp5(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -643,6 +691,15 @@ program ncedit
      ! --- calculate water = qc + qr + qi + qs + qg [kg/kg]
      if(debug_level.ge.200) print *, " Calculate water = qc + qr + qi + qs + qg"
      select case (flag)
+     case (1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp(i,j) = tmp1(i,j) + tmp2(i,j) + tmp3(i,j) + tmp4(i,j) + tmp5(i,j)
+        end do
+        end do
+!$omp end parallel do
      case (2)
 !$omp parallel do default(shared) &
 !$omp private(i,k)
@@ -2454,6 +2511,9 @@ program ncedit
         select case (varname)
         case ('thetae')
            print *, "The tmp array has already allocated"
+        case ('water')
+           if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
+           tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         case ('rain')
            if(debug_level.ge.100) print *, " unit: [cm] -> [mm]"
            tmp(:,:) = var_in(:,:,1,1)*real(10.) ! unit: [cm] -> [mm]
