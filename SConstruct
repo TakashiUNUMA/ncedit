@@ -64,7 +64,7 @@ else:
 
 # define library path
 NETCDF = os.environ.get('NETCDF')
-HDF5 = os.environ.get('HDF')
+HDF5 = os.environ.get('HDF5')
 ZLIB = os.environ.get('ZLIB')
 
 # check library path
