@@ -2,7 +2,7 @@
 ! N C E D I T (stats)
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2014/10/02
+! Last modified: 2014/10/13
 !
 
 program ncedit_stats
@@ -291,6 +291,12 @@ program ncedit_stats
         else
            var_out(t) = 0.
         end if
+        if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
+     end do
+
+  case ('tmfu')
+     do t = 1, tmax, 1
+        var_out(t) = var_in(t)/real(1.0d10)
         if(debug_level.ge.200) print 222, "t,time_out,var_out = ",t,time_out(t),var_out(t)
      end do
 
