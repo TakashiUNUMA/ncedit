@@ -37,7 +37,7 @@ program ncedit
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
   real, dimension(:,:,:),   allocatable :: tmpc1, tmpc2, tmpc3
-  real, dimension(:,:,:,:), allocatable :: ivar_in
+  real, dimension(:,:,:,:), allocatable :: ivar_in, tmp4d, tmp4d1, tmp4d2, tmp4d3
   real, parameter :: pi = 3.14159265
   real, parameter :: t0 = 273.15
 
@@ -429,19 +429,19 @@ program ncedit
         tmpi2(1:imax,1:jmax,1:tmax) = 0.
         tmpi3(1:imax,1:jmax,1:tmax) = 0.
      case ('tthetaeave')
-        ! Time series of the area-averaged value of theta-e
-        allocate( var_in(imax,jmax,1,tmax) ) ! xyt + z-loop
-        istart = (/ 1, 1, zselect, 1 /)
-        icount = (/ imax, jmax, 1, tmax /)
-        var_in(1:imax,1:jmax,1,1:tmax) = nan
+        ! Time series of the area- and mixed layer-averaged value of theta-e
+        allocate( var_in(imax,jmax,5,tmax) ) ! xyt + z-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, 5, tmax /)
+        var_in(1:imax,1:jmax,1:5,1:tmax) = nan
         allocate( tmp(tmax,1) )
         tmp(1:tmax,1) = 0.
-        allocate( tmpi(imax,jmax,tmax) )
-        tmpi(1:imax,1:jmax,1:tmax) = 0.
-        allocate( tmpi1(imax,jmax,tmax),tmpi2(imax,jmax,tmax),tmpi3(imax,jmax,tmax) )
-        tmpi1(1:imax,1:jmax,1:tmax) = 0.
-        tmpi2(1:imax,1:jmax,1:tmax) = 0.
-        tmpi3(1:imax,1:jmax,1:tmax) = 0.
+        allocate( tmp4d(imax,jmax,5,tmax) )
+        tmp4d(1:imax,1:jmax,1:5,1:tmax) = 0.
+        allocate( tmp4d1(imax,jmax,5,tmax),tmp4d2(imax,jmax,5,tmax),tmp4d3(imax,jmax,5,tmax) )
+        tmp4d1(1:imax,1:jmax,1:5,1:tmax) = 0.
+        tmp4d2(1:imax,1:jmax,1:5,1:tmax) = 0.
+        tmp4d3(1:imax,1:jmax,1:5,1:tmax) = 0.
      case ('tqvave')
         ! time series of the area-averaged value of qv
         allocate( var_in(imax,jmax,1,tmax) ) ! xyt + z-loop
@@ -2121,13 +2121,12 @@ program ncedit
      end do ! end of k-loop
 
   case ('tthetaeave')
-     ! Area-averaged value of theta-e
+     ! Area and mixed layer averaged value of theta-e
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
         stop 2
      end if
-     tmpi(:,:,:) = 0. 
      ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.200) print *, "Success: inquire the varid"
@@ -2138,11 +2137,13 @@ program ncedit
      if(debug_level.ge.200) print *, "Success: get the var array (prs)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
 !$omp parallel do default(shared) &
-!$omp private(i,j,t)
+!$omp private(i,j,k,t)
      do t = 1, tmax, 1
+     do k = 1, 5, 1
      do j = 1, jmax, 1
      do i = 1, imax, 1
-        tmpi1(i,j,t) = var_in(i,j,1,t)
+        tmp4d1(i,j,k,t) = var_in(i,j,k,t)
+     end do
      end do
      end do
      end do
@@ -2157,11 +2158,13 @@ program ncedit
      if(debug_level.ge.200) print *, "Success: get the var array (th)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
 !$omp parallel do default(shared) &
-!$omp private(i,j,t)
+!$omp private(i,j,k,t)
      do t = 1, tmax, 1
+     do k = 1, 5, 1
      do j = 1, jmax, 1
      do i = 1, imax, 1
-        tmpi2(i,j,t) = var_in(i,j,1,t)
+        tmp4d2(i,j,k,t) = var_in(i,j,k,t)
+     end do
      end do
      end do
      end do
@@ -2176,13 +2179,15 @@ program ncedit
      if(debug_level.ge.200) print *, "Success: get the var array (qv)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
 !$omp parallel do default(shared) &
-!$omp private(i,j,t,tmp0)
+!$omp private(i,j,k,t,tmp0)
      do t = 1, tmax, 1
+     do k = 1, 5, 1
      do j = 1, jmax, 1
      do i = 1, imax, 1
-        tmpi3(i,j,t) = var_in(i,j,1,t)
-        tmp0 = thetaP_2_T( tmpi2(i,j,t), tmpi1(i,j,t) )
-        tmpi(i,j,t) = thetae_Bolton( tmp0, tmpi3(i,j,t), tmpi1(i,j,t) )
+        tmp4d3(i,j,k,t) = var_in(i,j,k,t)
+        tmp0 = thetaP_2_T( tmp4d2(i,j,k,t), tmp4d1(i,j,k,t) )
+        tmp4d(i,j,k,t) = thetae_Bolton( tmp0, tmp4d3(i,j,k,t), tmp4d1(i,j,k,t) )
+     end do
      end do
      end do
      end do
@@ -2190,14 +2195,16 @@ program ncedit
      ! calc. mean value
      do t = 1, tmax, 1
         tmp0 = 0.
+        do k = 1, 5, 1
         do j = 1, jmax, 1
+        !do i = int(imax/2 + 1), imax, 1
         do i = 1, imax, 1
-           if (tmpi(i,j,t).gt.0.) then
-              tmp0 = tmp0 + tmpi(i,j,t)
-           end if
+           tmp0 = tmp0 + tmp4d(i,j,k,t)
         end do
         end do
-        tmp(t,1) = tmp0/real(imax*jmax) ! unit: [m/s]
+        end do
+        !tmp(t,1) = tmp0/real(int(imax/2)*jmax*5)
+        tmp(t,1) = tmp0/real(imax*jmax*5)
      end do ! end of t-loop
 
   case ('tqvave')
@@ -2394,7 +2401,7 @@ program ncedit
      
      ! writeout data to output file
      select case (varname)
-     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tconave','tlfcave')
+     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tcinave','tlfcave')
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
