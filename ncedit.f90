@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/10/28
+! last modified: 2014/10/29
 !
 
 program ncedit
@@ -342,7 +342,7 @@ program ncedit
      ! x-t
      select case (varname)
      case ('cape','cin','lfc')
-        ! for calculation of CAPE using getcape
+        ! Calculate mlCAPE, mlCIN, LFC by using getcape
         allocate( var_in(imax,1,kmax,tmax) ) ! xzt
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
@@ -354,7 +354,7 @@ program ncedit
         allocate( tmp(imax,tmax) )
         tmp(1:imax,1:tmax) = nan
      case ('thetae')
-        ! for calculating thetae
+        ! Calculate thetae
         allocate( var_in(imax,1,1,tmax) ) ! xt
         istart = (/ 1, yselect, zselect, 1 /)
         icount = (/ imax, 1, 1, tmax /)
@@ -365,6 +365,20 @@ program ncedit
         tmp3(1:imax,1:tmax) = nan
         allocate( tmp(imax,tmax) )
         tmp(1:imax,1:tmax) = nan
+     case ('mlthetae')
+        ! Calculate mixed-layer thetae
+        allocate( var_in(imax,1,5,tmax) ) ! xt
+        istart = (/ 1, yselect, 1, 1 /)
+        icount = (/ imax, 1, 5, tmax /)
+        var_in(1:imax,1,1:5,1:tmax) = nan
+        allocate( tmp(imax,tmax) )
+        tmp(1:imax,1:tmax) = nan
+        allocate( tmpi1(imax,5,tmax),tmpi2(imax,5,tmax) )
+        allocate( tmpi3(imax,5,tmax),tmpi(imax,5,tmax) )
+        tmpi1(1:imax,1:5,1:tmax) = nan
+        tmpi2(1:imax,1:5,1:tmax) = nan
+        tmpi3(1:imax,1:5,1:tmax) = nan
+        tmpi(1:imax,1:5,1:tmax) = nan
      case ('xvort','yvort','zvort')
         allocate( var_in(imax,1,1,tmax) ) ! xt
         istart = (/ 1, yselect, zselect, 1 /)
@@ -883,6 +897,83 @@ program ncedit
 !$omp end parallel do
      end select
 
+  case ('mlthetae')
+     ! mixed-layer equivalent potential temperature [K]
+     ! *** this section work with flag = 3 ***
+     if( flag.ne.3 ) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read prs [Pa]
+     call check( nf90_inq_varid(ncid, "prs", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (prs)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
+     do t = 1, tmax, 1
+     do k = 1, 5, 1    ! from 50 m to 450 m
+     do i = 1, imax, 1
+           tmpi1(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read theta [K]
+     call check( nf90_inq_varid(ncid, "th", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (th)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
+     do t = 1, tmax, 1
+     do k = 1, 5, 1    ! from 50 m to 450 m
+     do i = 1, imax, 1
+           tmpi2(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read qv [kg/kg]
+     call check( nf90_inq_varid(ncid, "qv", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (qv)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
+     do t = 1, tmax, 1
+     do k = 1, 5, 1    ! from 50 m to 450 m
+     do i = 1, imax, 1
+           tmpi3(i,k,t) = var_in(i,1,k,t)
+           tmp0 = thetaP_2_T( tmpi2(i,k,t), tmpi1(i,k,t) )
+           tmpi(i,k,t) = thetae_Bolton( tmp0, tmpi3(i,k,t), tmpi1(i,k,t) )
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! average the values within the specified mixed-layer (z=50-450m)
+     do t = 1, tmax, 1
+     do i = 1, imax, 1
+        tmp(i,t) = 0.d0
+        do k = 1, 5, 1
+           tmp(i,t) = tmp(i,t) + tmpi(i,k,t)
+        end do
+        tmp(i,t) = tmp(i,t)/real(5.0d0)
+     end do
+     end do
+
   case ('cape','cin','lfc')
      ! Calculate as following variables:
      !  - 500 m mixed-layer convective available potential energy (mlCAPE) [J kg-1]
@@ -1369,25 +1460,24 @@ program ncedit
            tmp0 = 0.
            ipoint = 0
            do j = 1, jmax, 1
-           do i = 1, imax, 1
+!           do i = 1, imax, 1
+           do i = int(imax/2)+1, int(imax/2)+100, 1
               ! unit [cm] -> [mm/h]
-              if ( ((var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.)).gt.0. ) then
-                 ! calculate the summation if the tmp0 is larger than 0. [mm/h]
+              if ( ((var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.)).ge.0. ) then
+                 ! calculate the summation if the tmp0 is equal to or larger than 0. [mm/h]
                  tmp0 = tmp0 + ((var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.))
                  ! calculate the number of grid points (x-y) which satisfies this if section
                  ipoint = ipoint + 1
-              else
-                 tmp0 = tmp0 + 0.
               end if
-           end do
-           end do
+           end do ! end of i-loop
+           end do ! end of j-loop
            if(debug_level.ge.200) print *, " t,tmp0,ipoint = ", t,tmp0,ipoint
            if ( tmp0.gt.0. ) then
               tmp(t,1) = tmp0/real(ipoint)
            else
               tmp(t,1) = 0.
            end if
-        end do
+        end do ! end of t-loop
 !$omp end parallel do
      end select
 
@@ -1432,7 +1522,8 @@ program ncedit
         ! for t >= 2
         do t = 2, tmax, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            tmp0 = (var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.) ! unit [cm] -> [mm/h] for dt = 1 min
            if( (tmp0.ge.tmpmin).and.(tmp0.lt.tmpmax) ) tmp(t,1) = tmp(t,1) + 1. ! for dx = 1 km
         end do
@@ -1538,12 +1629,14 @@ program ncedit
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
-           do i = 1, imax, 1
+!           do i = 1, imax, 1
+           do i = int(imax/2)+1, int(imax/2)+100, 1
               tmp0 = tmp0 + tmpi(i,j,t)
            end do
            end do
            end do
-           tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [kg/kg]
+!           tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [kg/kg], full domain
+           tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [kg/kg], 100 km width from the center of domain
         case ('vtotwcstd')
            print *, " under construction"
            stop
@@ -1596,7 +1689,8 @@ program ncedit
            do t = time_min, time_max, 1
               tmpmax = -1.e30
               do j = 1, jmax, 1
-              do i = 1, imax, 1
+!              do i = 1, imax, 1
+              do i = int(imax/2)+1, int(imax/2)+100, 1
                  if (tmpi(i,j,t).gt.tmpmax) then
                     tmpmax = tmpi(i,j,t)
                  end if
@@ -1611,7 +1705,8 @@ program ncedit
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
-           do i = 1, imax, 1
+!           do i = 1, imax, 1
+           do i = int(imax/2)+1, int(imax/2)+100, 1
               if (tmpi(i,j,t).gt.0.) then
                  tmp0 = tmp0 + tmpi(i,j,t)
                  ipoint = ipoint + 1
@@ -1666,12 +1761,14 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            tmp0 = tmp0 + tmpi(i,j,t)
         end do
         end do
         end do
-        tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [m/s]
+!        tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [m/s]
+        tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [m/s]
      end do ! end of k-loop
 
   case ('vqvave')
@@ -1712,12 +1809,13 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            tmp0 = tmp0 + tmpi(i,j,t)
         end do
         end do
         end do
-        tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [m/s]
+        tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [m/s]
      end do ! end of k-loop
 
   case ('vqvavec')
@@ -1768,7 +1866,8 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            if(var_in(i,j,1,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
@@ -1862,7 +1961,8 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            if (tmpi(i,j,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
@@ -1965,7 +2065,8 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            if (var_in(i,j,1,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
@@ -2059,7 +2160,8 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            if (tmpi(i,j,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
@@ -2162,7 +2264,8 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            if (var_in(i,j,1,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
@@ -2255,13 +2358,15 @@ program ncedit
         do k = 1, 5, 1
         do j = 1, jmax, 1
         !do i = int(imax/2 + 1), imax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            tmp0 = tmp0 + tmp4d(i,j,k,t)
         end do
         end do
         end do
         !tmp(t,1) = tmp0/real(int(imax/2)*jmax*5)
-        tmp(t,1) = tmp0/real(imax*jmax*5)
+!        tmp(t,1) = tmp0/real(imax*jmax*5)
+        tmp(t,1) = tmp0/real(100*jmax*5)
      end do ! end of t-loop
 
   case ('tqvave')
@@ -2296,7 +2401,8 @@ program ncedit
         ipoint = 0
         tmp0 = 0.
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            if (tmpi(i,j,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
@@ -2313,8 +2419,8 @@ program ncedit
 
   case ('tcapeave','tcinave','tlfcave')
      ! Calculate as following variables:
-     !  - convective available potential energy [J kg-1]
-     !  - convective inhibition [J kg-1]
+     !  - mixed-layer convective available potential energy [J kg-1]
+     !  - mixed-layer convective inhibition [J kg-1]
      !  - lebel of free convection [hPa]
      ! *** this section work with flag = 4 only (for now) ***
      if(flag.ne.4) then
@@ -2387,7 +2493,8 @@ program ncedit
      do t = 1, tmax, 1
         ipoint = 0
         tmp0 = 0.
-        do i = 1, imax, 1
+!        do i = 1, imax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
            gbcape = 0.
            gbcin = 0.
            gblfcz = 0.
@@ -2653,14 +2760,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-        case ('cape','cin','lfc')
-           do t = 1, tmax, 1
-           do i = 1, imax, 1
-              var_out(i,t) = tmp(i,t)
-           end do
-           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
-           end do
-        case ('thetae')
+        case ('cape','cin','lfc','thetae','mlthetae')
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
