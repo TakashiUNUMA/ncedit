@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/10/29
+! last modified: 2014/10/30
 !
 
 program ncedit
@@ -952,7 +952,7 @@ program ncedit
      if(debug_level.ge.100) print *, "Success: get the var array (qv)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
 !$omp parallel do default(shared) &
-!$omp private(i,k,t)
+!$omp private(i,k,t,tmp0)
      do t = 1, tmax, 1
      do k = 1, 5, 1    ! from 50 m to 450 m
      do i = 1, imax, 1
@@ -1397,6 +1397,35 @@ program ncedit
         end do
 !$omp end parallel do
      end select
+
+  case ('rainrate')
+     ! rain rate [mm h^-1]
+     ! *** this section work with flag = 3 ***
+     if(flag.ne.3) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read rain [cm]
+     call check( nf90_inq_varid(ncid, "rain", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ! for t = 1
+     tmp(1,1) = 0.0
+!$omp parallel do default(shared) &
+!$omp private(i,t)
+     ! for t >= 2
+     do t = 2, tmax, 1
+     do i = 1, imax, 1
+        ! the value for dt = 1 [min] (= 60 sec)
+        tmp(i,t) = (var_in(i,1,t,1) - var_in(i,1,t-1,1))*real(60.*10.) ! unit [cm] -> [mm/h]
+     end do
+     end do
+!$omp end parallel do
 
   case ('maxrain')
      ! maximum rain rate [mm h^-1]
@@ -2760,7 +2789,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-        case ('cape','cin','lfc','thetae','mlthetae')
+        case ('cape','cin','lfc','thetae','mlthetae','rainrate')
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
