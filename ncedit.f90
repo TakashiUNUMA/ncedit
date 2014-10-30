@@ -445,6 +445,27 @@ program ncedit
         tmpi1(1:imax,1:jmax,1:tmax) = 0.
         tmpi2(1:imax,1:jmax,1:tmax) = 0.
         tmpi3(1:imax,1:jmax,1:tmax) = 0.
+     case ('vtheta','vqv')
+        ! An area-averaged value of the vertical profile of theta and qv
+        allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
+        allocate( tmp(tmax,1) )
+        tmp(1:kmax,1) = 0.
+     case ('vthetae','vthetav')
+        ! An area-averaged value of the vertical profile of theta-e and virtual theta
+        allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
+        allocate( tmp(tmax,1) )
+        tmp(1:kmax,1) = 0.
+        allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax),tmp4(imax,jmax) )
+        tmp1(1:imax,1:jmax) = 0.
+        tmp2(1:imax,1:jmax) = 0.
+        tmp3(1:imax,1:jmax) = 0.
+        tmp4(1:imax,1:jmax) = 0.
      case ('tthetaeave')
         ! Time series of the area- and mixed layer-averaged value of theta-e
         allocate( var_in(imax,jmax,5,tmax) ) ! xyt + z-loop
@@ -1800,6 +1821,35 @@ program ncedit
         tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [m/s]
      end do ! end of k-loop
 
+  case ('vtheta')
+     ! A area-averaged value of the vertical profile of theta
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, tselect /)
+        ! --- read theta [K]
+        call check( nf90_inq_varid(ncid, "th", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (th)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ! calc. mean value
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
+           tmp0 = tmp0 + var_in(i,j,1,1)
+        end do
+        end do
+        tmp(k,1) = tmp0/real(100*jmax) ! unit: [K]
+     end do ! end of k-loop
+
   case ('vqvave')
      ! A mean-value of the vertical profile of water vapor mixing ratio
      ! *** this section work with flag = 4 ***
@@ -1815,7 +1865,7 @@ program ncedit
         if(debug_level.ge.100) print *, " z = ", k
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
-        ! --- read theta [K]
+        ! --- read qv [kg/kg]
         call check( nf90_inq_varid(ncid, "qv", varid) )
         if(debug_level.ge.200) print *, "Success: inquire the varid"
         if(debug_level.ge.200) print *, " varid         = ", varid
@@ -1845,6 +1895,35 @@ program ncedit
         end do
         end do
         tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [m/s]
+     end do ! end of k-loop
+
+  case ('vqv')
+     ! A area-averaged value of the vertical profile of qv
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, tselect /)
+        ! --- read qv [kg/kg]
+        call check( nf90_inq_varid(ncid, "qv", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ! calc. mean value
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
+           tmp0 = tmp0 + var_in(i,j,1,1)
+        end do
+        end do
+        tmp(k,1) = tmp0/real(100*jmax) ! unit: [kg/kg]
      end do ! end of k-loop
 
   case ('vqvavec')
@@ -2006,6 +2085,79 @@ program ncedit
         end if
      end do ! end of k-loop
 
+  case ('vthetae')
+     ! A area-averaged value of the vertical profile of theta-e
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, tselect /)
+        ! --- read prs [Pa]
+        call check( nf90_inq_varid(ncid, "prs", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
+        ! --- read theta [K]
+        call check( nf90_inq_varid(ncid, "th", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (th)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qv [kg/kg]
+        call check( nf90_inq_varid(ncid, "qv", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,tmp0)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1)
+           tmp0 = thetaP_2_T( tmp2(i,j), tmp1(i,j) )
+           tmp4(i,j) = thetae_Bolton( tmp0, tmp3(i,j), tmp1(i,j) )
+        end do
+        end do
+!$omp end parallel do
+        ! calc. mean value
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
+           tmp0 = tmp0 + tmp4(i,j)
+        end do
+        end do
+        tmp(k,1) = tmp0/real(100.*jmax)
+     end do ! end of k-loop
+
   case ('vthetaeavec')
      ! A mean-value of the vertical profile of theta-e inside of clouds
      ! *** this section work with flag = 4 ***
@@ -2108,6 +2260,79 @@ program ncedit
         else
            tmp(k,1) = 0.
         end if
+     end do ! end of k-loop
+
+  case ('vthetav')
+     ! A area-averaged value of the vertical profile of virtual theta
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, tselect /)
+        ! --- read prs [Pa]
+        call check( nf90_inq_varid(ncid, "prs", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
+        ! --- read theta [K]
+        call check( nf90_inq_varid(ncid, "th", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (th)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qv [kg/kg]
+        call check( nf90_inq_varid(ncid, "qv", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,tmp0)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1)
+           tmp0 = thetaP_2_T( tmp2(i,j), tmp1(i,j) )
+           tmp4(i,j) = TqvP_2_thetav( tmp0, tmp3(i,j), tmp1(i,j) )
+        end do
+        end do
+!$omp end parallel do
+        ! calc. mean value
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = int(imax/2)+1, int(imax/2)+100, 1
+           tmp0 = tmp0 + tmp4(i,j)
+        end do
+        end do
+        tmp(k,1) = tmp0/real(100.*jmax)
      end do ! end of k-loop
 
   case ('vrhave')
@@ -2585,8 +2810,14 @@ program ncedit
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! Output 1D file
      ! The following variables are work with this option:
-     !  "maxrain", "averain", "apw", "apm", "aps", "ape", "tthetaeave", "tqvave"
-     !  "vtotwcave", "vtotwcstd", "vwmax", "vwave", "vthetaeave"
+     ! (time series)
+     !  "maxrain", "averain", "apw", "apm", "aps", "ape", 
+     !  "tthetaeave", "tqvave", "tcapeave", "tcinave", "tlfcave", 
+     ! (time and area (x-y) averaged vertical profile)
+     !  "vtotwcave", "vtotwcstd", "vqvave", "vqvavec", "vthetaeave", "vthetaeavec", 
+     !  "vrhave", "vrhavec", "vwmax", "vwave", 
+     ! (area averaged vertical profile)
+     !  "vtheta", "vqv", "vthetae", "vthetav"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! create the file
      open(unit=20,file=output)
@@ -2599,7 +2830,7 @@ program ncedit
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
         end do
-     case ('vtotwcave','vtotwcstd','vqvave','vqvavec')
+     case ('vtotwcave','vtotwcstd','vqvave','vqvavec','vqv')
         if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
@@ -2610,7 +2841,7 @@ program ncedit
            write(20,111) z(k), tmp(k,1) ! unit: [m/s]
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [m/s]
         end do
-     case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec')
+     case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec','vtheta','vthetae','vthetav')
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)
@@ -3240,7 +3471,7 @@ contains
   !ccccccccccccccccccccccccccccccccccccc
   !----- STPK: thermo_function.f90 -----
   !ccccccccccccccccccccccccccccccccccccc
-  real function thetae_Bolton(T,qv,P)
+  real function thetae_Bolton( T, qv, P )
     ! Bolton(1980) による手法を用いて相当温位を計算する.
     ! この相当温位は偽断熱過程での相当温位である.
     ! T_LCL を用いるので, そのための関数を使用する.
@@ -3259,7 +3490,7 @@ contains
     return
   end function thetae_Bolton
   
-  real function TqvP_2_TLCL(T,qv,P)  !! 温度と混合比と全圧から T_LCL を計算する
+  real function TqvP_2_TLCL( T, qv, P )  !! 温度と混合比と全圧から T_LCL を計算する
     ! 混合比から水蒸気圧を求め, そこから T_LCL を計算する
     implicit none
     real, intent(in) :: T  ! 温度 [K]
@@ -3279,7 +3510,7 @@ contains
     return
   end function TqvP_2_TLCL
   
-  real function qvP_2_e(qv,P)  ! 混合比と全圧から水蒸気圧を計算する
+  real function qvP_2_e( qv, P )  ! 混合比と全圧から水蒸気圧を計算する
     implicit none
     real, intent(in) :: qv  ! 混合比 [kg / kg]
     real, intent(in) :: P  ! 全圧 [Pa]
@@ -3293,7 +3524,7 @@ contains
     return
   end function qvP_2_e
   
-  real function TP_2_qvs(T,P)  ! 温度と全圧から飽和混合比を計算する
+  real function TP_2_qvs( T, P )  ! 温度と全圧から飽和混合比を計算する
     ! ここでは, es_Bolton を用いて飽和水蒸気圧を計算した後,
     ! eP_2_qv を用いて混合比に変換することで飽和混合比を計算する.
     implicit none
@@ -3311,7 +3542,7 @@ contains
     return
   end function TP_2_qvs
   
-  real function es_Bolton(T)  ! Bolton(1980) の手法を用いて飽和水蒸気圧を計算する.
+  real function es_Bolton( T )  ! Bolton(1980) の手法を用いて飽和水蒸気圧を計算する.
     implicit none
     real, intent(in) :: T  ! 大気の温度 [K]
     real, parameter :: a=17.67, c=29.65
@@ -3323,7 +3554,7 @@ contains
     return
   end function es_Bolton
   
-  real function eP_2_qv(e,P)  ! 水蒸気圧と全圧から混合比を計算する
+  real function eP_2_qv( e, P )  ! 水蒸気圧と全圧から混合比を計算する
     implicit none
     real, intent(in) :: e  ! 水蒸気圧 [Pa]
     real, intent(in) :: P  ! 大気の全圧 [Pa]
@@ -3337,7 +3568,7 @@ contains
     return
   end function eP_2_qv
 
-  real function thetaP_2_T(theta,P)  ! 温位, 圧力から温度を計算する(乾燥大気として計算)
+  real function thetaP_2_T( theta, P )  ! 温位, 圧力から温度を計算する(乾燥大気として計算)
     implicit none
     real, intent(in) :: theta  ! 温位 [K]
     real, intent(in) :: P  ! 湿潤大気の全圧 [Pa]
@@ -3353,7 +3584,7 @@ contains
     return
   end function thetaP_2_T
 
-  real function TP_2_rho(T,P)  ! 乾燥大気の状態方程式から, 温度と気圧を与えて密度を得る.
+  real function TP_2_rho( T, P )  ! 乾燥大気の状態方程式から, 温度と気圧を与えて密度を得る.
     implicit none
     real, intent(in) :: T    ! 大気の温度 [K]
     real, intent(in) :: P    ! 大気の圧力 [Pa]
@@ -3364,7 +3595,7 @@ contains
     return
   end function TP_2_rho
 
-  real function eT_2_RH(e,T)  ! 水蒸気圧と温度から相対湿度を計算する
+  real function eT_2_RH( e, T )  ! 水蒸気圧と温度から相対湿度を計算する
     ! $RH=(e/es)\times 100$ という定義から計算.
     implicit none
     real, intent(in) :: e  ! 水蒸気圧 [Pa]
@@ -3377,7 +3608,7 @@ contains
     return
   end function eT_2_RH
 
-  real function qvTP_2_RH(qv,T,P)  ! 混合比と温度から相対湿度を計算する.
+  real function qvTP_2_RH( qv, T, P )  ! 混合比と温度から相対湿度を計算する.
     ! qvP_2_e から水蒸気圧を計算し, 相対湿度の定義を用いる.
     implicit none
     real, intent(in) :: qv  ! 相対湿度 [kg / kg]
@@ -3390,6 +3621,54 @@ contains
     
     return
   end function qvTP_2_RH
+
+  real function TqvP_2_thetav( T, qv, P )  ! 温度, 水蒸気混合比, 圧力から仮温位を計算する.
+    implicit none
+    real, intent(in) :: qv  ! 水蒸気混合比 [kg / kg]
+    real, intent(in) :: T   ! 温度 [K]
+    real, intent(in) :: P   ! 圧力 [Pa]
+    real :: kappa, Tv
+    real, parameter :: Rd=287.0
+    real, parameter :: Cpd=1004.0
+
+    kappa=Rd/Cpd
+    Tv=qvT_2_Tv(qv,T)
+    TqvP_2_thetav=theta_dry(Tv,P)
+    
+    return
+  end function TqvP_2_thetav
+
+  real function qvT_2_Tv( qv, T )  ! 温度と水蒸気混合比から仮温度を計算する.
+    implicit none
+    real, intent(in) :: qv  ! 水蒸気混合比 [kg / kg]
+    real, intent(in) :: T   ! 温度 [K]
+    real :: eps
+    real, parameter :: Rd=287.0
+    real, parameter :: Rv=461.0
+    
+    eps=Rd/Rv
+    qvT_2_Tv=T*(1.0+qv/eps)/(1.0+qv)
+    
+    return
+  end function qvT_2_Tv
+
+  real function theta_dry( T, P )  ! 乾燥大気における温位を計算する
+    ! ただし, 湿潤大気においても, 観測される全圧を P として計算することができ
+    ! その結果は別関数 theta_moist の結果とそれほど変わらない.
+    implicit none
+    real, intent(in) :: T  ! 温度 [K]
+    real, intent(in) :: P  ! 乾燥大気の気圧(もしくは, 湿潤大気の全圧) [Pa]
+    real :: kappa
+    real, parameter :: Rd=287.0
+    real, parameter :: Cpd=1004.0
+    real, parameter :: p0=1.0e5
+
+    kappa=Rd/Cpd
+    theta_dry=T*(p0/P)**kappa
+    
+    return
+  end function theta_dry
+  
 
 !-----------------------------------------------------------------------
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
