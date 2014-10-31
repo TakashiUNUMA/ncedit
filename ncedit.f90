@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/10/30
+! last modified: 2014/10/31
 !
 
 program ncedit
@@ -11,7 +11,7 @@ program ncedit
   
   implicit none
 
-  ! I/O values and arrays
+  ! I/O variables and arrays
   integer :: flag, xselect, yselect, zselect, tselect
   integer :: interp_x, interp_y
   integer :: imax, jmax, kmax, tmax
@@ -36,7 +36,7 @@ program ncedit
   real, dimension(:),       allocatable :: yy
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
-  real, dimension(:,:,:),   allocatable :: tmpc1, tmpc2, tmpc3
+  real, dimension(:,:,:),   allocatable :: tmpc, tmpc1, tmpc2, tmpc3
   real, dimension(:,:,:,:), allocatable :: ivar_in, tmp4d, tmp4d1, tmp4d2, tmp4d3
   real, parameter :: pi = 3.14159265
   real, parameter :: t0 = 273.15
@@ -445,6 +445,8 @@ program ncedit
         tmpi1(1:imax,1:jmax,1:tmax) = 0.
         tmpi2(1:imax,1:jmax,1:tmax) = 0.
         tmpi3(1:imax,1:jmax,1:tmax) = 0.
+        allocate( tmpc(imax,jmax,tmax) )
+        tmpc(1:imax,1:jmax,1:tmax) = 0.
      case ('vtheta','vqv')
         ! An area-averaged value of the vertical profile of theta and qv
         allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
@@ -1977,6 +1979,36 @@ program ncedit
         call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
         if(debug_level.ge.200) print *, "Success: get the var array (qc)"
         if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qr [kg/kg]
+        call check( nf90_inq_varid(ncid, "qr", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qr)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t) &
+!$omp reduction(+:tmpc)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc(i,j,t) = tmpc(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
         ! calc. mean value
         ipoint = 0
         tmp0 = 0.
@@ -1984,7 +2016,8 @@ program ncedit
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
         do i = int(imax/2)+1, int(imax/2)+100, 1
-           if(var_in(i,j,1,t).gt.0.) then
+           ! cloud area is defined as tmpc >= 0.01 [g/kg]
+           if ( tmpc(i,j,t).gt.real(0.01*0.001) ) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
            end if
@@ -2249,6 +2282,36 @@ program ncedit
         call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
         if(debug_level.ge.200) print *, "Success: get the var array (qc)"
         if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qr [kg/kg]
+        call check( nf90_inq_varid(ncid, "qr", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qr)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t) &
+!$omp reduction(+:tmpc)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc(i,j,t) = tmpc(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
         ! calc. mean value
         ipoint = 0
         tmp0 = 0.
@@ -2256,7 +2319,8 @@ program ncedit
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
         do i = int(imax/2)+1, int(imax/2)+100, 1
-           if (var_in(i,j,1,t).gt.0.) then
+           ! cloud area is defined as tmpc >= 0.01 [g/kg]
+           if ( tmpc(i,j,t).gt.real(0.01*0.001) ) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
            end if
@@ -2521,6 +2585,36 @@ program ncedit
         call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
         if(debug_level.ge.200) print *, "Success: get the var array (qc)"
         if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc(i,j,t) = var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
+        ! --- read qr [kg/kg]
+        call check( nf90_inq_varid(ncid, "qr", varid) )
+        if(debug_level.ge.200) print *, "Success: inquire the varid"
+        if(debug_level.ge.200) print *, " varid         = ", varid
+        if(debug_level.ge.300) print *, "  istart       = ", istart
+        if(debug_level.ge.300) print *, "  icount       = ", icount
+        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+        if(debug_level.ge.200) print *, "Success: get the var array (qr)"
+        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+!$omp parallel do default(shared) &
+!$omp private(i,j,t) &
+!$omp reduction(+:tmpc)
+        do t = 1, tmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc(i,j,t) = tmpc(i,j,t) + var_in(i,j,1,t)
+        end do
+        end do
+        end do
+!$omp end parallel do
         ! calc. mean value
         ipoint = 0
         tmp0 = 0.
@@ -2528,7 +2622,8 @@ program ncedit
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
         do i = int(imax/2)+1, int(imax/2)+100, 1
-           if (var_in(i,j,1,t).gt.0.) then
+           ! cloud area is defined as tmpc >= 0.01 [g/kg]
+           if ( tmpc(i,j,t).gt.real(0.01*0.001) ) then
               tmp0 = tmp0 + tmpi(i,j,t)
               ipoint = ipoint + 1
            end if
