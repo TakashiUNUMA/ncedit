@@ -341,8 +341,8 @@ program ncedit
   case (3)
      ! x-t
      select case (varname)
-     case ('cape','cin','lfc')
-        ! Calculate mlCAPE, mlCIN, LFC by using getcape
+     case ('cape','cin','lfc','lins')
+        ! Calculate mlCAPE, mlCIN, LFC, and mlCAPE/mlCIN by using getcape
         allocate( var_in(imax,1,kmax,tmax) ) ! xzt
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
@@ -995,11 +995,13 @@ program ncedit
      end do
      end do
 
-  case ('cape','cin','lfc')
+  case ('cape','cin','lfc','lins')
      ! Calculate as following variables:
      !  - 500 m mixed-layer convective available potential energy (mlCAPE) [J kg-1]
      !  - convective inhibition [J kg-1]
      !  - lebel of free convection [hPa]
+     !  - the ratio of 500 m mixed-layer convective available potential energy (mlCAPE) [J kg-1]
+     !    to convective inhibition (mlCIN) [J kg-1]
      ! *** this section work with flag = 3 only (for now) ***
      if(flag.ne.3) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1014,19 +1016,16 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (prs)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     select case (flag)
-     case (3)
 !$omp parallel do default(shared) &
 !$omp private(i,k,t)
-        do t = 1, tmax, 1
-        do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmpc1(i,k,t) = var_in(i,1,k,t)*real(0.01) ! unit: [hPa]
-        end do
-        end do
-        end do
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpc1(i,k,t) = var_in(i,1,k,t)*real(0.01) ! unit: [hPa]
+     end do
+     end do
+     end do
 !$omp end parallel do
-     end select
      ! --- read theta [K]
      call check( nf90_inq_varid(ncid, "th", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1036,21 +1035,18 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (th)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     select case (flag)
-     case (3)
 !$omp parallel do default(shared) &
 !$omp private(i,k,t,tmp0)
-        do t = 1, tmax, 1
-        do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp0 = var_in(i,1,k,t)
-           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
-           tmpc2(i,k,t) = thetaP_2_T( tmp0, tmpc1(i,k,t)*100. ) - t0 ! unit: [degree C]
-        end do
-        end do
-        end do
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp0 = var_in(i,1,k,t)
+        ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+        tmpc2(i,k,t) = thetaP_2_T( tmp0, tmpc1(i,k,t)*100. ) - t0 ! unit: [degree C]
+     end do
+     end do
+     end do
 !$omp end parallel do
-     end select
      ! --- read qv [kg/kg]
      call check( nf90_inq_varid(ncid, "qv", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1060,60 +1056,72 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (qv)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     select case (flag)
-     case (3)
 !$omp parallel do default(shared) &
 !$omp private(i,k,t)
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpc3(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! calculate CAPE, CIN, LFC, lins (latent instability)
+     select case (varname)
+     case ('cape')
+        if(debug_level.ge.100) print *, " Now calculating CAPE [J kg-1]"
+!$omp parallel do default(shared) &
+!$omp private(i,t)
         do t = 1, tmax, 1
-        do k = 1, kmax, 1
         do i = 1, imax, 1
-           tmpc3(i,k,t) = var_in(i,1,k,t)
+           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),tmp(i,t), &
+                         gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
         end do
-        end do
+        if(debug_level.ge.200) print *, "  t,cape = ",t,tmp(xselect,t)
         end do
 !$omp end parallel do
-        ! calculate CAPE, CIN or LFC
-        select case (varname)
-        case ('cape')
-           if(debug_level.ge.100) print *, " Now calculating CAPE [J kg-1]"
+     case ('cin')
+        if(debug_level.ge.100) print *, " Now calculating CIN [J kg-1]"
 !$omp parallel do default(shared) &
 !$omp private(i,t)
-           do t = 1, tmax, 1
-           do i = 1, imax, 1
-              CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),tmp(i,t), &
-                   gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
-           end do
-           if(debug_level.ge.200) print *, "  t,cape = ",t,tmp(xselect,t)
-           end do
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
+                         tmp(i,t),gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
+        end do
+        if(debug_level.ge.200) print *, "  t,cin = ",t,tmp(xselect,t)
+        end do
 !$omp end parallel do
-        case ('cin')
-           if(debug_level.ge.100) print *, " Now calculating CIN [J kg-1]"
+     case ('lfc')
+        if(debug_level.ge.100) print *, " Now calculating LFC [m]"
+        !if(debug_level.ge.100) print *, " Now calculating LFC [hPa]"
 !$omp parallel do default(shared) &
 !$omp private(i,t)
-           do t = 1, tmax, 1
-           do i = 1, imax, 1
-              CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
-                   tmp(i,t),gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
-           end do
-           if(debug_level.ge.200) print *, "  t,cin = ",t,tmp(xselect,t)
-           end do
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
+                         gbcin,gblclp,gblfcp,gblnbp,gblclz,tmp(i,t),gblnbz,debug_level,1  ) ! unit: [m]
+!                         gbcin,gblclp,tmp(i,t),gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  ) ! unit: [Pa]
+        end do
+        if(debug_level.ge.200) print *, "  t,lfc = ",t,tmp(xselect,t)
+        end do
 !$omp end parallel do
-        case ('lfc')
-           if(debug_level.ge.100) print *, " Now calculating LFC [m]"
-!           if(debug_level.ge.100) print *, " Now calculating LFC [hPa]"
+     case ('lins')
+        if(debug_level.ge.100) print *, " Now calculating the ratio of mlCAPE to mlCIN"
 !$omp parallel do default(shared) &
-!$omp private(i,t)
-           do t = 1, tmax, 1
-           do i = 1, imax, 1
-              CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
-                   gbcin,gblclp,gblfcp,gblnbp,gblclz,tmp(i,t),gblnbz,debug_level,1  ) ! unit: [m]
-!                   gbcin,gblclp,tmp(i,t),gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  ) ! unit: [Pa]
-           end do
-           if(debug_level.ge.200) print *, "  t,lfc = ",t,tmp(xselect,t)
-           end do
-!$omp end parallel do
-        end select
-        if(debug_level.ge.100) print *, " Done"
+!$omp private(i,t,gbcape,gbcin)
+        do t = 1, tmax, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,gbcin, &
+                         gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1     )
+           if( (gbcape.gt.0.).and.(gbcin.gt.0.) ) then
+              tmp(i,t) = real(gbcape/gbcin)
+           else
+              tmp(i,t) = 0.
+           end if
+        end do
+        if(debug_level.ge.200) print *, "  t,lins = ",t,tmp(xselect,t)
+        end do
      end select
 
   case ('lwdt') ! under construction ... 2014/09/18
@@ -3020,7 +3028,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-        case ('cape','cin','lfc','thetae','mlthetae','rainrate')
+        case ('cape','cin','lfc','lins','thetae','mlthetae','rainrate')
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
