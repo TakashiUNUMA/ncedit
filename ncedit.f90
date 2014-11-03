@@ -282,6 +282,7 @@ program ncedit
      tmp3(1:imax,1:jmax) = nan
      tmp4(1:imax,1:jmax) = nan
      tmp5(1:imax,1:jmax) = nan
+     !
   case (2)
      ! x-z
      select case (varname)
@@ -368,6 +369,7 @@ program ncedit
         tmp4(1:imax,1:kmax) = nan
         tmp5(1:imax,1:kmax) = nan
      end select
+     !
   case (3)
      ! x-t
      select case (varname)
@@ -462,6 +464,7 @@ program ncedit
         allocate( tmp(imax,tmax) )
         tmp(1:imax,1:tmax) = nan
      end select
+     !
   case (4)
      select case (varname)
      case ('maxrain','averain','apw','apm','aps','ape')
@@ -594,6 +597,7 @@ program ncedit
         print *, "ERROR: Please define by yourself for ",trim(varname)," on this section"
         stop 1
      end select
+     !
   case (5)
      ! arbitrary cross-section specifying (xselect,yselect) and angle
      inx = imax
@@ -612,11 +616,15 @@ program ncedit
      tmpi3(1:imax,1:jmax,1:kmax) = nan
      allocate( tmp(imax,kmax) )
      tmp(1:imax,1:kmax) = nan
+     !
   end select
 
-  
+  !ccccccccccccccccccccccccccccccccccccccccccccccc
+  ! ----- Executable sections are from here -----
+  !ccccccccccccccccccccccccccccccccccccccccccccccc
   ! inquire and get var
   if(debug_level.ge.100) print *, "varname (",trim(varname),") is selected"
+  !
   select case (varname)
   case ('water','xtwater')
      ! The section for all water (qc+qr+qi+qc+qg) on the microphysics processes
@@ -1389,14 +1397,8 @@ program ncedit
         stop 2
      end if
      ! --- read uinterp [m/s]
-     call check( nf90_inq_varid(ncid, "uinterp", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'uinterp'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
      select case (flag)
      case (5)
 !$omp parallel do default(shared) &
@@ -1411,14 +1413,8 @@ program ncedit
 !$omp end parallel do
      end select
      ! --- read vinterp [m/s]
-     call check( nf90_inq_varid(ncid, "vinterp", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'vinterp'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
      select case (flag)
      case (5)
 !$omp parallel do default(shared) &
@@ -1443,14 +1439,8 @@ program ncedit
         stop 2
      end if
      ! --- read rain [cm]
-     call check( nf90_inq_varid(ncid, "rain", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'rain'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
      ! for t = 1
      tmp(1,1) = 0.0
 !$omp parallel do default(shared) &
@@ -1472,14 +1462,8 @@ program ncedit
         stop 2
      end if
      ! --- read rain [cm]
-     call check( nf90_inq_varid(ncid, "rain", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'rain'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
      select case (flag)
      case (4)
         ! for t = 1
@@ -1506,16 +1490,12 @@ program ncedit
         stop 2
      end if
      ! --- read rain [cm]
-     call check( nf90_inq_varid(ncid, "rain", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'rain'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
      select case (flag)
      case (4)
+        ista = imax/2 + 1
+        iend = imax/2 + 100
         ! for t = 1
         tmp(1,1) = 0.0
 !$omp parallel do default(shared) &
@@ -1527,8 +1507,6 @@ program ncedit
            ipoint = 0
            do j = 1, jmax, 1
 !           do i = 1, imax, 1
-           ista = imax/2 + 1
-           iend = imax/2 + 100
            do i = ista, iend, 1
               ! unit [cm] -> [mm/h]
               if ( ((var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.)).ge.0. ) then
@@ -1558,14 +1536,8 @@ program ncedit
      end if
      tmp(1:tmax,1) = 0. ! The tmp array is cleared with zero instend of nan
      ! --- read rain [cm]
-     call check( nf90_inq_varid(ncid, "rain", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'rain'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
      select case (flag)
      case (4)
         select case (varname)
@@ -1582,6 +1554,8 @@ program ncedit
            tmpmin = 50.0
            tmpmax = 200.0
         end select
+        ista = imax/2 + 1
+        iend = imax/2 + 100
         ! for t = 1
         tmp(1,1) = 0.0
 !$omp parallel do default(shared) &
@@ -1591,8 +1565,6 @@ program ncedit
         do t = 2, tmax, 1
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do i = ista, iend, 1
            tmp0 = (var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.) ! unit [cm] -> [mm/h] for dt = 1 min
            if( (tmp0.ge.tmpmin).and.(tmp0.lt.tmpmax) ) tmp(t,1) = tmp(t,1) + 1. ! for dx = 1 km
@@ -1614,14 +1586,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read qc
-        call check( nf90_inq_varid(ncid, "qc", varid) )
-        if(debug_level.ge.200) print *, " Success: inquire the varid"
-        if(debug_level.ge.200) print *, "  varid         = ", varid
-        if(debug_level.ge.300) print *, "   istart       = ", istart
-        if(debug_level.ge.300) print *, "   icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, " Success: get the var array"
-        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qc'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         do t = 1, tmax, 1
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -1630,14 +1596,8 @@ program ncedit
         end do
         end do
         ! --- read qr
-        call check( nf90_inq_varid(ncid, "qr", varid) )
-        if(debug_level.ge.200) print *, " Success: inquire the varid"
-        if(debug_level.ge.200) print *, "  varid         = ", varid
-        if(debug_level.ge.300) print *, "   istart       = ", istart
-        if(debug_level.ge.300) print *, "   icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, " Success: get the var array"
-        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qr'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         do t = 1, tmax, 1
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -1646,14 +1606,8 @@ program ncedit
         end do
         end do
         ! --- read qi
-        call check( nf90_inq_varid(ncid, "qi", varid) )
-        if(debug_level.ge.200) print *, " Success: inquire the varid"
-        if(debug_level.ge.200) print *, "  varid         = ", varid
-        if(debug_level.ge.300) print *, "   istart       = ", istart
-        if(debug_level.ge.300) print *, "   icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, " Success: get the var array"
-        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qi'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         do t = 1, tmax, 1
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -1662,14 +1616,8 @@ program ncedit
         end do
         end do
         ! --- read qs
-        call check( nf90_inq_varid(ncid, "qs", varid) )
-        if(debug_level.ge.200) print *, " Success: inquire the varid"
-        if(debug_level.ge.200) print *, "  varid         = ", varid
-        if(debug_level.ge.300) print *, "   istart       = ", istart
-        if(debug_level.ge.300) print *, "   icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, " Success: get the var array"
-        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         do t = 1, tmax, 1
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -1678,14 +1626,8 @@ program ncedit
         end do
         end do
         ! --- read qg
-        call check( nf90_inq_varid(ncid, "qg", varid) )
-        if(debug_level.ge.200) print *, " Success: inquire the varid"
-        if(debug_level.ge.200) print *, "  varid         = ", varid
-        if(debug_level.ge.300) print *, "   istart       = ", istart
-        if(debug_level.ge.300) print *, "   icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, " Success: get the var array"
-        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qg'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         do t = 1, tmax, 1
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -1696,12 +1638,12 @@ program ncedit
         select case (varname)
         case ('vtotwcave')
            ! calc. averaged value
+           ista = imax/2 + 1
+           iend = imax/2 + 100
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
 !           do i = 1, imax, 1
-           ista = imax/2 + 1
-           iend = imax/2 + 100
            do i = ista, iend, 1
               tmp0 = tmp0 + tmpi(i,j,t)
            end do
@@ -1739,14 +1681,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read winterp
-        call check( nf90_inq_varid(ncid, "winterp", varid) )
-        if(debug_level.ge.200) print *, " Success: inquire the varid"
-        if(debug_level.ge.200) print *, "  varid         = ", varid
-        if(debug_level.ge.300) print *, "   istart       = ", istart
-        if(debug_level.ge.300) print *, "   icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, " Success: get the var array"
-        if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'winterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         do t = 1, tmax, 1
         do j = 1, jmax, 1
         do i = 1, imax, 1
@@ -1757,13 +1693,13 @@ program ncedit
         select case (varname)
         case ('vwmax')
            ! calc. max value
+           ista = imax/2 + 1
+           iend = imax/2 + 100
            tmp0   = 0.
            do t = time_min, time_max, 1
               tmpmax = -1.e30
               do j = 1, jmax, 1
 !              do i = 1, imax, 1
-              ista = imax/2 + 1
-              iend = imax/2 + 100
               do i = ista, iend, 1
                  if (tmpi(i,j,t).gt.tmpmax) then
                     tmpmax = tmpi(i,j,t)
@@ -1775,13 +1711,13 @@ program ncedit
            tmp(k,1) = tmp0/real(time_max-time_min+1) ! unit: [m/s]
         case ('vwave')
            ! calc. mean value
+           ista = imax/2 + 1
+           iend = imax/2 + 100
            ipoint = 0
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
 !           do i = 1, imax, 1
-           ista = imax/2 + 1
-           iend = imax/2 + 100
            do i = ista, iend, 1
               if (tmpi(i,j,t).gt.0.) then
                  tmp0 = tmp0 + tmpi(i,j,t)
@@ -1815,14 +1751,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -1834,12 +1764,12 @@ program ncedit
         end do
 !$omp end parallel do
         ! calc. mean value
+        ista = imax/2 + 1
+        iend = imax/2 + 100
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do i = ista, iend, 1
            tmp0 = tmp0 + tmpi(i,j,t)
         end do
@@ -1860,19 +1790,13 @@ program ncedit
         if(debug_level.ge.100) print *, " z = ", k
         istart = (/ 1, 1, k, tselect /)
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         ! calc. mean value
-        tmp0 = 0.
-        do j = 1, jmax, 1
         ista = imax/2 + 1
         iend = imax/2 + 100
+        tmp0 = 0.
+        do j = 1, jmax, 1
         do i = ista, iend, 1
            tmp0 = tmp0 + var_in(i,j,1,1)
         end do
@@ -1896,14 +1820,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -1915,12 +1833,12 @@ program ncedit
         end do
 !$omp end parallel do
         ! calc. mean value
+        ista = imax/2 + 1
+        iend = imax/2 + 100
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do i = ista, iend, 1
            tmp0 = tmp0 + tmpi(i,j,t)
         end do
@@ -1940,14 +1858,8 @@ program ncedit
         if(debug_level.ge.100) print *, " z = ", k
         istart = (/ 1, 1, k, tselect /)
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         ! calc. mean value
         tmp0 = 0.
         ista = imax/2 + 1
@@ -1976,14 +1888,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -1995,14 +1901,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qc [kg/kg]
-        call check( nf90_inq_varid(ncid, "qc", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qc)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qc'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2014,14 +1914,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qr [kg/kg]
-        call check( nf90_inq_varid(ncid, "qr", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qr)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qr'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t) &
 !$omp reduction(+:tmpc)
@@ -2073,14 +1967,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read prs [Pa]
-        call check( nf90_inq_varid(ncid, "prs", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2092,14 +1980,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2111,14 +1993,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t,tmp0)
         do t = 1, tmax, 1
@@ -2165,14 +2041,8 @@ program ncedit
         if(debug_level.ge.100) print *, " z = ", k
         istart = (/ 1, 1, k, tselect /)
         ! --- read prs [Pa]
-        call check( nf90_inq_varid(ncid, "prs", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j)
         do j = 1, jmax, 1
@@ -2199,14 +2069,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,tmp0)
         do j = 1, jmax, 1
@@ -2245,14 +2109,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read prs [Pa]
-        call check( nf90_inq_varid(ncid, "prs", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2264,14 +2122,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2283,14 +2135,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t,tmp0)
         do t = 1, tmax, 1
@@ -2304,14 +2150,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qc [kg/kg]
-        call check( nf90_inq_varid(ncid, "qc", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qc)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qc'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2323,14 +2163,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qr [kg/kg]
-        call check( nf90_inq_varid(ncid, "qr", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qr)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qr'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t) &
 !$omp reduction(+:tmpc)
@@ -2377,14 +2211,8 @@ program ncedit
         if(debug_level.ge.100) print *, " z = ", k
         istart = (/ 1, 1, k, tselect /)
         ! --- read prs [Pa]
-        call check( nf90_inq_varid(ncid, "prs", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j)
         do j = 1, jmax, 1
@@ -2394,14 +2222,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j)
         do j = 1, jmax, 1
@@ -2411,14 +2233,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,tmp0)
         do j = 1, jmax, 1
@@ -2457,14 +2273,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read prs [Pa]
-        call check( nf90_inq_varid(ncid, "prs", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2476,14 +2286,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2495,14 +2299,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t,tmp0)
         do t = 1, tmax, 1
@@ -2554,14 +2352,8 @@ program ncedit
         istart = (/ 1, 1, k, 1 /)
         tmpi(:,:,:) = 0. 
         ! --- read prs [Pa]
-        call check( nf90_inq_varid(ncid, "prs", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (prs)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2573,14 +2365,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2592,14 +2378,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qv [kg/kg]
-        call check( nf90_inq_varid(ncid, "qv", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t,tmp0)
         do t = 1, tmax, 1
@@ -2613,14 +2393,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qc [kg/kg]
-        call check( nf90_inq_varid(ncid, "qc", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qc)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qc'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
         do t = 1, tmax, 1
@@ -2632,14 +2406,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read qr [kg/kg]
-        call check( nf90_inq_varid(ncid, "qr", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (qr)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'qr'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t) &
 !$omp reduction(+:tmpc)
@@ -2681,14 +2449,8 @@ program ncedit
         stop 2
      end if
      ! --- read prs [Pa]
-     call check( nf90_inq_varid(ncid, "prs", varid) )
-     if(debug_level.ge.200) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.200) print *, "Success: get the var array (prs)"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'prs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,k,t)
      do t = 1, tmax, 1
@@ -2702,14 +2464,8 @@ program ncedit
      end do
 !$omp end parallel do
      ! --- read theta [K]
-     call check( nf90_inq_varid(ncid, "th", varid) )
-     if(debug_level.ge.200) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.200) print *, "Success: get the var array (th)"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'th'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,k,t)
      do t = 1, tmax, 1
@@ -2723,14 +2479,8 @@ program ncedit
      end do
 !$omp end parallel do
      ! --- read qv [kg/kg]
-     call check( nf90_inq_varid(ncid, "qv", varid) )
-     if(debug_level.ge.200) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'qv'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,k,t,tmp0)
      do t = 1, tmax, 1
@@ -2769,14 +2519,8 @@ program ncedit
      end if
      tmpi(:,:,:) = 0. 
      ! --- read qv [kg/kg]
-     call check( nf90_inq_varid(ncid, "qv", varid) )
-     if(debug_level.ge.200) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.200) print *, "Success: get the var array (qv)"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'qv'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j,t)
      do t = 1, tmax, 1
@@ -2821,14 +2565,8 @@ program ncedit
         stop 2
      end if
      ! --- read prs [Pa]
-     call check( nf90_inq_varid(ncid, "prs", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array (prs)"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'prs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,k,t)
      do t = 1, tmax, 1
@@ -2840,14 +2578,8 @@ program ncedit
      end do
 !$omp end parallel do
      ! --- read theta [K]
-     call check( nf90_inq_varid(ncid, "th", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array (th)"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'th'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,k,t,tmp0)
      do t = 1, tmax, 1
@@ -2861,14 +2593,8 @@ program ncedit
      end do
 !$omp end parallel do
      ! --- read qv [kg/kg]
-     call check( nf90_inq_varid(ncid, "qv", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array (qv)"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ivarname = 'qv'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,k,t)
      do t = 1, tmax, 1
@@ -2927,14 +2653,7 @@ program ncedit
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
      if(debug_level.ge.100) print *, "Use default case"
-     call check( nf90_inq_varid(ncid, varname, varid) )
-     if(debug_level.ge.200) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  istart       = ", istart
-     if(debug_level.ge.300) print *, "  icount       = ", icount
-     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-     if(debug_level.ge.200) print *, "Success: get the var array"
-     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     call getncvar( varname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 
   end select
 
@@ -3018,7 +2737,7 @@ program ncedit
         ! select one of the 2D array
         select case (varname)
         case ('thetae')
-           print *, "The tmp array has already allocated"
+           if(debug_level.ge.100) print *, "The tmp array has already allocated"
         case ('water')
            if(debug_level.ge.100) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
@@ -3060,7 +2779,7 @@ program ncedit
         ! select one of the 2D array
         select case (varname)
         case ('water')
-           print *, "The tmp array has already allocated for ", trim(varname)
+           if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
            if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         case ('qc','qr','qi','qs','qg')
@@ -3068,7 +2787,7 @@ program ncedit
            if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         case ('thetae','lwdt','wadv','vpga','buoy','sruinterp','srvinterp')
-           print *, "The tmp array has already allocated for ", trim(varname)
+           if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
         case default
            tmp(:,:) = var_in(:,1,:,1)
         end select
