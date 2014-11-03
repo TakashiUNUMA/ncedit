@@ -491,7 +491,7 @@ program ncedit
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, 1, tmax /)
         var_in(1:imax,1:jmax,1,1:tmax) = nan
-        allocate( tmp(tmax,1) )
+        allocate( tmp(kmax,1) )
         tmp(1:kmax,1) = 0.
         allocate( tmpi(imax,jmax,tmax) )
         tmpi(1:imax,1:jmax,1:tmax) = 0.
@@ -617,7 +617,25 @@ program ncedit
      allocate( tmp(imax,kmax) )
      tmp(1:imax,1:kmax) = nan
      !
+  case (6)
+     select case (varname)
+     case ('tzwater')
+        ! Averaged values of the vertical profile of theta and water vapor mixing ratio
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        allocate( var_in(imax,jmax,kmax,1) ) ! xyt + z-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmp(tmax,kmax) )
+        tmp(1:tmax,1:kmax) = 0.
+        allocate( tmpi(imax,jmax,kmax) )
+        tmpi(1:imax,1:jmax,1:kmax) = 0.
+     end select
   end select
+
 
   !ccccccccccccccccccccccccccccccccccccccccccccccc
   ! ----- Executable sections are from here -----
@@ -2649,6 +2667,80 @@ program ncedit
      end do
 !$omp end parallel do
 
+  case ('tzwater')
+     ! t-z axis of horizontally averaged total water- and ice-phase mixing ratio
+     ! *** this section work with flag = 6 ***
+     if(flag.ne.6) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        tmpi(:,:,:) = 0. 
+        ! --- read qc
+        ivarname = 'qc'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- read qr
+        ivarname = 'qr'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- read qi
+        ivarname = 'qi'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- read qs
+        ivarname = 'qs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- read qg
+        ivarname = 'qg'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ista = imax/2 + 1
+        iend = imax/2 + 100
+        tmp0 = 0.
+        do k = 1, kmax, 1
+           do j = 1, jmax, 1
+           do i = ista, iend, 1
+              tmp0 = tmp0 + tmpi(i,j,k)
+           end do
+           end do
+           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], 100 km width from the center of domain
+        end do
+     end do ! end of t-loop
+
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
@@ -3019,6 +3111,72 @@ program ncedit
         end if
         if(debug_level.ge.200) print *, " var_out(",nx/2,",:) = ", var_out(nx/2,:)
 
+     else if(flag.eq.6) then
+        ! t-z
+        if(debug_level.ge.100) print *, "t-z array"
+        !
+        ! select one of the 2D array
+        select case (varname)
+        case ('tzwater')
+           if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
+           if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
+           tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+        end select
+        if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
+        
+        ! ix array
+        ix(:) = x(:)
+        if(debug_level.ge.200) print *, " ix(:)         = ", ix
+
+        ! iy array
+        if(interp_y.eq.1) then
+           ! interpolate the stretched y-coordinate to constant dy coordinate
+           do k = 1, ny, 1
+              iy(k) = (k-1)*dy
+           end do
+           if(debug_level.ge.200) print *, " iy(:)         = ", iy
+
+           if(iy(ny).gt.z(kmax)) then
+              print *, ""
+              print *, "ERROR: iy(ny) exceeds z(kmax)"
+              print *, "        iy(ny)  = ", iy(ny)
+              print *, "        z(kmax) = ", z(kmax)
+              print *, "       iy(ny) should be smaller than or equal to z(kmax)"
+              print *, "*** Please reduce the values of ny or dy ***"
+              print *, ""
+              stop 3
+           end if
+
+           select case (interp_method)
+           case ('linear')
+              ! z coordinate points are linearly interpolated by interp_linear
+              do i = 1, imax
+                 CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
+              end do
+           case ('near')
+              ! z coordinate points are interpolated by nearest_interp_1d
+              do i = 1, imax
+                 CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
+              end do
+           case ('stpk')
+              ! z coordinate points are linearly interpolated by STPK library
+              do j = 2, ny-1, 1
+                 !CALL nearest_search_1d( z, iy(j), ipoint)
+                 CALL interpo_search_1d( z, iy(j), ipoint)
+                 if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
+                 do i = 1, imax, 1
+                    var_out(i,j) = tmp(i,ipoint)
+                 end do
+              end do
+           end select
+        else
+           ! use the values of the original z-coordinate
+           iy(:) = z(:)
+           ! use original data 
+           var_out(:,:) = tmp(:,:)
+        end if
+        if(debug_level.ge.200) print *, " var_out(",xselect,",:) = ", var_out(xselect,:)
+
      end if
      if(debug_level.ge.100) print *, ""
      
@@ -3125,13 +3283,14 @@ contains
     character(len=20), intent(in) :: ivar
     !
     call check( nf90_inq_varid(ncid, trim(ivar), varid) )
-    if(debug_level.ge.100) print *, " Success: inquire the varid"
+    if(debug_level.ge.200) print *, " Success: inquire the varid"
     if(debug_level.ge.200) print *, "  varid         = ", varid
     if(debug_level.ge.300) print *, "   istart       = ", istart
     if(debug_level.ge.300) print *, "   icount       = ", icount
     call check( nf90_get_var(ncid, varid, var_io, start = istart, count = icount ) )
-    if(debug_level.ge.100) print *, " Success: get the var array (",trim(ivar),")"
+    if(debug_level.ge.200) print *, " Success: get the var array (",trim(ivar),")"
     if(debug_level.ge.200) print *, "  var_in(1,1,1,1) = ", var_io(1,1,1,1)
+    !
   end subroutine getncvar
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
