@@ -625,7 +625,7 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
-        allocate( var_in(imax,jmax,kmax,1) ) ! xyt + z-loop
+        allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
         var_in(1:imax,1:jmax,1:kmax,1) = nan
@@ -2730,8 +2730,8 @@ program ncedit
         end do
         ista = imax/2 + 1
         iend = imax/2 + 100
-        tmp0 = 0.
         do k = 1, kmax, 1
+           tmp0 = 0.
            do j = 1, jmax, 1
            do i = ista, iend, 1
               tmp0 = tmp0 + tmpi(i,j,k)
@@ -3125,7 +3125,7 @@ program ncedit
         if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
         
         ! ix array
-        ix(:) = x(:)
+        ix(:) = time_in(:)
         if(debug_level.ge.200) print *, " ix(:)         = ", ix
 
         ! iy array
@@ -3150,12 +3150,12 @@ program ncedit
            select case (interp_method)
            case ('linear')
               ! z coordinate points are linearly interpolated by interp_linear
-              do i = 1, imax
+              do i = 1, tmax
                  CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
               end do
            case ('near')
               ! z coordinate points are interpolated by nearest_interp_1d
-              do i = 1, imax
+              do i = 1, tmax
                  CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
               end do
            case ('stpk')
@@ -3164,7 +3164,7 @@ program ncedit
                  !CALL nearest_search_1d( z, iy(j), ipoint)
                  CALL interpo_search_1d( z, iy(j), ipoint)
                  if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
-                 do i = 1, imax, 1
+                 do i = 1, tmax, 1
                     var_out(i,j) = tmp(i,ipoint)
                  end do
               end do
