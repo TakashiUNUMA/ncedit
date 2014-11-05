@@ -190,6 +190,11 @@ program ncedit
      end select
   end if
 
+!  ista = imax/2 + 1
+!  iend = imax/2 + 100
+  ista = imax/2 - 49
+  iend = imax/2 + 150
+
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! Input 4D file
@@ -373,8 +378,8 @@ program ncedit
   case (3)
      ! x-t
      select case (varname)
-     case ('cape','cin','lfc','lins')
-        ! Calculate mlCAPE, mlCIN, LFC, and mlCAPE/mlCIN by using getcape
+     case ('cape','cin','lfc','lnb','lins')
+        ! Calculate mlCAPE, mlCIN, LFC, LNB, and mlCAPE/mlCIN by using getcape
         inx = imax
         iny = 1
         inz = kmax
@@ -595,7 +600,7 @@ program ncedit
         tmp(1:tmax,1) = 0.
         allocate( tmpi(imax,jmax,tmax) )
         tmpi(1:imax,1:jmax,1:tmax) = 0.
-     case ('tcapeave','tcinave','tlfcave')
+     case ('tcapeave','tcinave','tlfcave','tlnbave')
         ! for calculation of CAPE using getcape
         inx = imax
         iny = 1
@@ -1068,11 +1073,12 @@ program ncedit
      end do
      end do
 
-  case ('cape','cin','lfc','lins')
+  case ('cape','cin','lfc','lnb','lins')
      ! Calculate as following variables:
      !  - 500 m mixed-layer convective available potential energy (mlCAPE) [J kg-1]
      !  - convective inhibition [J kg-1]
-     !  - lebel of free convection [hPa]
+     !  - lebel of free convection [m]
+     !  - lebel of neutral buoyancy [m]
      !  - the ratio of 500 m mixed-layer convective available potential energy (mlCAPE) [J kg-1]
      !    to convective inhibition (mlCIN) [J kg-1]
      ! *** this section work with flag = 3 only (for now) ***
@@ -1121,63 +1127,33 @@ program ncedit
      end do
      end do
 !$omp end parallel do
-     ! calculate CAPE, CIN, LFC, lins (latent instability)
-     select case (varname)
-     case ('cape')
-        if(debug_level.ge.100) print *, " Now calculating CAPE [J kg-1]"
-!$omp parallel do default(shared) &
-!$omp private(i,t)
-        do t = 1, tmax, 1
-        do i = 1, imax, 1
-           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),tmp(i,t), &
-                         gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
-        end do
-        if(debug_level.ge.200) print *, "  t,cape = ",t,tmp(xselect,t)
-        end do
-!$omp end parallel do
-     case ('cin')
-        if(debug_level.ge.100) print *, " Now calculating CIN [J kg-1]"
-!$omp parallel do default(shared) &
-!$omp private(i,t)
-        do t = 1, tmax, 1
-        do i = 1, imax, 1
-           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
-                         tmp(i,t),gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1 )
-        end do
-        if(debug_level.ge.200) print *, "  t,cin = ",t,tmp(xselect,t)
-        end do
-!$omp end parallel do
-     case ('lfc')
-        if(debug_level.ge.100) print *, " Now calculating LFC [m]"
-        !if(debug_level.ge.100) print *, " Now calculating LFC [hPa]"
-!$omp parallel do default(shared) &
-!$omp private(i,t)
-        do t = 1, tmax, 1
-        do i = 1, imax, 1
-           CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,   &
-                         gbcin,gblclp,gblfcp,gblnbp,gblclz,tmp(i,t),gblnbz,debug_level,1  ) ! unit: [m]
-!                         gbcin,gblclp,tmp(i,t),gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  ) ! unit: [Pa]
-        end do
-        if(debug_level.ge.200) print *, "  t,lfc = ",t,tmp(xselect,t)
-        end do
-!$omp end parallel do
-     case ('lins')
-        if(debug_level.ge.100) print *, " Now calculating the ratio of mlCAPE to mlCIN"
-!$omp parallel do default(shared) &
-!$omp private(i,t,gbcape,gbcin)
+     ! calculate CAPE, CIN, LFC, LNB, lins (latent instability)
+!$omp parallel do default(shared)         &
+!$omp private(i,t,gbcape,gbcin,gblfcz,gblnbz)
         do t = 1, tmax, 1
         do i = 1, imax, 1
            CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape,gbcin, &
-                         gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1     )
-           if( (gbcape.gt.0.).and.(gbcin.gt.0.) ) then
-              tmp(i,t) = real(gbcape/gbcin)
-           else
-              tmp(i,t) = 0.
-           end if
+                         gblclp,gblfcp,gblnbp, gblclz,gblfcz,gblnbz, debug_level, 1  )
+           select case (varname)
+           case ('cape')
+              tmp(i,t) = gbcape
+           case ('cin')
+              tmp(i,t) = gbcin
+           case ('lfc')
+              tmp(i,t) = gblfcz
+           case ('lnb')
+              tmp(i,t) = gblnbz
+           case ('lins')
+              if( (gbcape.gt.0.).and.(gbcin.gt.0.) ) then
+                 tmp(i,t) = real(gbcape/gbcin)
+              else
+                 tmp(i,t) = 0.
+              end if
+           end select
         end do
-        if(debug_level.ge.200) print *, "  t,lins = ",t,tmp(xselect,t)
+        if(debug_level.ge.200) print *, "  t,",trim(varname)," = ",t,tmp(xselect,t)
         end do
-     end select
+!$omp end parallel do
 
   case ('lwdt') ! under construction ... 2014/09/18
      ! Calculate LWDT [m s-2], which is proposed by Fovell and Tan (1998)
@@ -1533,13 +1509,8 @@ program ncedit
      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
      select case (flag)
      case (4)
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         ! for t = 1
         tmp(1,1) = 0.0
-!$omp parallel do default(shared) &
-!$omp private(i,j,t)              &
-!$omp reduction(+:tmp0,ipoint)
         ! for t >= 2
         do t = 2, tmax, 1
            tmp0 = 0.
@@ -1563,7 +1534,6 @@ program ncedit
               tmp(t,1) = 0.
            end if
         end do ! end of t-loop
-!$omp end parallel do
      end select
 
   case ('apw','apm','aps','ape')
@@ -1593,13 +1563,8 @@ program ncedit
            tmpmin = 50.0
            tmpmax = 200.0
         end select
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         ! for t = 1
         tmp(1,1) = 0.0
-!$omp parallel do default(shared) &
-!$omp private(i,j,t,tmp0) &
-!$omp reduction(+:tmp)
         ! for t >= 2
         do t = 2, tmax, 1
         do j = 1, jmax, 1
@@ -1610,7 +1575,6 @@ program ncedit
         end do
         end do
         end do
-!$omp end parallel do
      end select
 
   case ('vtotwcave','vtotwcstd')
@@ -1677,8 +1641,6 @@ program ncedit
         select case (varname)
         case ('vtotwcave')
            ! calc. averaged value
-           ista = imax/2 + 1
-           iend = imax/2 + 100
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
@@ -1732,8 +1694,6 @@ program ncedit
         select case (varname)
         case ('vwmax')
            ! calc. max value
-           ista = imax/2 + 1
-           iend = imax/2 + 100
            tmp0   = 0.
            do t = time_min, time_max, 1
               tmpmax = -1.e30
@@ -1750,8 +1710,6 @@ program ncedit
            tmp(k,1) = tmp0/real(time_max-time_min+1) ! unit: [m/s]
         case ('vwave')
            ! calc. mean value
-           ista = imax/2 + 1
-           iend = imax/2 + 100
            ipoint = 0
            tmp0 = 0.
            do t = time_min, time_max, 1
@@ -1803,8 +1761,6 @@ program ncedit
         end do
 !$omp end parallel do
         ! calc. mean value
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
@@ -1832,8 +1788,6 @@ program ncedit
         ivarname = 'th'
         call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         ! calc. mean value
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         tmp0 = 0.
         do j = 1, jmax, 1
         do i = ista, iend, 1
@@ -1872,8 +1826,6 @@ program ncedit
         end do
 !$omp end parallel do
         ! calc. mean value
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
@@ -1901,8 +1853,6 @@ program ncedit
         call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
         ! calc. mean value
         tmp0 = 0.
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do j = 1, jmax, 1
         do i = ista, iend, 1
            tmp0 = tmp0 + var_in(i,j,1,1)
@@ -1969,8 +1919,6 @@ program ncedit
         ! calc. mean value
         ipoint = 0
         tmp0 = 0.
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
@@ -2049,8 +1997,6 @@ program ncedit
         ! calc. mean value
         ipoint = 0
         tmp0 = 0.
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
@@ -2122,8 +2068,6 @@ program ncedit
 !$omp end parallel do
         ! calc. mean value
         tmp0 = 0.
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do j = 1, jmax, 1
         do i = ista, iend, 1
            tmp0 = tmp0 + tmp4(i,j)
@@ -2218,8 +2162,6 @@ program ncedit
         ! calc. mean value
         ipoint = 0
         tmp0 = 0.
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
@@ -2286,8 +2228,6 @@ program ncedit
 !$omp end parallel do
         ! calc. mean value
         tmp0 = 0.
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do j = 1, jmax, 1
         do i = ista, iend, 1
            tmp0 = tmp0 + tmp4(i,j)
@@ -2355,8 +2295,6 @@ program ncedit
         ! calc. mean value
         ipoint = 0
         tmp0 = 0.
-        ista = imax/2 + 1
-        iend = imax/2 + 100
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
 !        do i = 1, imax, 1
@@ -2535,8 +2473,6 @@ program ncedit
      end do
 !$omp end parallel do
      ! calc. mean value
-     ista = imax/2 + 1
-     iend = imax/2 + 100
      do t = 1, tmax, 1
         tmp0 = 0.
         do k = 1, 5, 1
@@ -2571,8 +2507,6 @@ program ncedit
      end do
 !$omp end parallel do
      ! calc. mean value
-     ista = imax/2 + 1
-     iend = imax/2 + 100
      do t = 1, tmax, 1
         ipoint = 0
         tmp0 = 0.
@@ -2593,11 +2527,12 @@ program ncedit
         end if
      end do ! end of t-loop
 
-  case ('tcapeave','tcinave','tlfcave')
+  case ('tcapeave','tcinave','tlfcave','tlnbave')
      ! Calculate as following variables:
      !  - mixed-layer convective available potential energy [J kg-1]
      !  - mixed-layer convective inhibition [J kg-1]
-     !  - lebel of free convection [hPa]
+     !  - lebel of free convection [m]
+     !  - lebel of neutral buoyancy [m]
      ! *** this section work with flag = 4 only (for now) ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2644,20 +2579,16 @@ program ncedit
      end do
      end do
 !$omp end parallel do
-     ! calculate CAPE, CIN or LFC
-     ista = imax/2 + 1
-     iend = imax/2 + 100
-!$omp parallel do default(shared)      &
-!$omp private(i,t,gbcape,gbcin,gblfcz) &
-!$omp reduction(+:tmp0,ipoint)
+     ! calculate CAPE, CIN, LFC, and LNB
      do t = 1, tmax, 1
         ipoint = 0
         tmp0 = 0.
 !        do i = 1, imax, 1
         do i = ista, iend, 1
            gbcape = 0.
-           gbcin = 0.
+           gbcin  = 0.
            gblfcz = 0.
+           gblnbz = 0.
            ! calc. mixed-layer (500 m) CAPE
            CALL getcape( 3,kmax,tmpc1(i,:,t),tmpc2(i,:,t),tmpc3(i,:,t),gbcape, &
                 gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  )
@@ -2677,6 +2608,11 @@ program ncedit
                  tmp0 = tmp0 + gblfcz
                  ipoint = ipoint + 1
               end if
+           case ('tlnbave')
+              if(gblnbz.gt.0.) then
+                 tmp0 = tmp0 + gblnbz
+                 ipoint = ipoint + 1
+              end if
            end select
         end do
         if(ipoint.gt.0) then
@@ -2686,7 +2622,6 @@ program ncedit
         end if
         if(debug_level.ge.100) print *, "  t,",trim(varname)," = ",t,tmp(t,1)
      end do
-!$omp end parallel do
 
   case ('tzwater')
      ! t-z axis of horizontally averaged total water- and ice-phase mixing ratio
@@ -2749,10 +2684,7 @@ program ncedit
         end do
         end do
         end do
-!        ista = imax/2 + 1
-!        iend = imax/2 + 100
-        ista = imax/2 - 49
-        iend = imax/2 + 150
+        ! --- calc. horizontally averaged value
         do k = 1, kmax, 1
            tmp0 = 0.
            do j = 1, jmax, 1
@@ -2787,10 +2719,6 @@ program ncedit
         end do
         end do
         ! --- average horizontally
-!        ista = imax/2 + 1
-!        iend = imax/2 + 100
-        ista = imax/2 - 49
-        iend = imax/2 + 150
         do k = 1, kmax, 1
            tmp0 = 0.
            do j = 1, jmax, 1
@@ -2825,10 +2753,6 @@ program ncedit
         end do
         end do
         ! --- average horizontally
-!        ista = imax/2 + 1
-!        iend = imax/2 + 100
-        ista = imax/2 - 49
-        iend = imax/2 + 150
         do k = 1, kmax, 1
            tmp0 = 0.
            do j = 1, jmax, 1
@@ -2954,7 +2878,7 @@ program ncedit
      ! The following variables are work with this option:
      ! (time series)
      !  "maxrain", "averain", "apw", "apm", "aps", "ape", 
-     !  "tthetaeave", "tqvave", "tcapeave", "tcinave", "tlfcave", 
+     !  "tthetaeave", "tqvave", "tcapeave", "tcinave", "tlfcave", "tlnbave", 
      ! (time and area (x-y) averaged vertical profile)
      !  "vtotwcave", "vtotwcstd", "vqvave", "vqvavec", "vthetaeave", "vthetaeavec", 
      !  "vrhave", "vrhavec", "vwmax", "vwave", 
@@ -2967,10 +2891,15 @@ program ncedit
      
      ! writeout data to output file
      select case (varname)
-     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tcinave','tlfcave')
+     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tcinave')
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
+        end do
+     case ('tlfcave','tlnbave')
+        do t = 1, tmax, 1
+           write(20,111) real(time_in(t)/dble(60.)), tmp(t,1) !*real(0.001) ! unit: [m] -> [km]
+           if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1) !*real(0.001) ! unit: [m] -> [km]
         end do
      case ('vtotwcave','vtotwcstd','vqvave','vqvavec','vqv')
         if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
@@ -3162,10 +3091,18 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-        case ('cape','cin','lfc','lins','thetae','mlthetae','rainrate','cpc','cph')
+        case ('cape','cin','lins','thetae','mlthetae','rainrate','cpc')
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
+           end do
+           if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
+           end do
+        case ('lfc','lnb','cph')
+           if(debug_level.ge.200) print *, " unit: [m] -> [km]"
+           do t = 1, tmax, 1
+           do i = 1, imax, 1
+              var_out(i,t) = tmp(i,t)*real(0.001) ! unit: [m] -> [km]
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
@@ -3186,15 +3123,12 @@ program ncedit
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
         case default
-!!! !$omp parallel do default(shared) &
-!!! !$omp private(i,t)
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = var_in(i,1,t,1)
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-!!! !$omp end parallel do
         end select
 
      else if(flag.eq.5) then
@@ -3243,7 +3177,7 @@ program ncedit
            if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
            end do
 !$omp end parallel do
-
+           !
         case default
 !$omp parallel do default(shared) &
 !$omp private(i,k,ipoints)
@@ -3260,7 +3194,7 @@ program ncedit
            if(debug_level.ge.200) print *, " tmp(",nx/2,",",k,")      = ", tmp(nx/2,k)
            end do
 !$omp end parallel do
-
+           !
         end select
 
         ! iy array
