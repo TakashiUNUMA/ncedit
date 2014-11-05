@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/11/03
+! last modified: 2014/11/05
 !
 
 program ncedit
@@ -37,7 +37,7 @@ program ncedit
   real :: gbcape, gbcin, gblclp, gblfcp, gblnbp, gblclz, gblfcz, gblnbz
   real, dimension(:),       allocatable :: yy
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
-  real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3
+  real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3, tmpi4, tmpi5
   real, dimension(:,:,:),   allocatable :: tmpc, tmpc1, tmpc2, tmpc3
   real, dimension(:,:,:,:), allocatable :: ivar_in, tmp4d, tmp4d1, tmp4d2, tmp4d3
   real, parameter :: pi = 3.14159265
@@ -452,6 +452,24 @@ program ncedit
         tmp3(1:imax,1:tmax) = nan
         tmp4(1:imax,1:tmax) = nan
         tmp5(1:imax,1:tmax) = nan
+     case ('cpc','cph')
+        inx = imax
+        iny = 1
+        inz = kmax
+        int = tmax
+        allocate( var_in(imax,1,kmax,tmax) ) ! xt
+        istart = (/ 1, yselect, 1, 1 /)
+        icount = (/ imax, 1, kmax, tmax /)
+        var_in(1:imax,1,1:kmax,1:tmax) = nan
+        allocate( tmp(imax,tmax) )
+        allocate( tmpi1(imax,kmax,tmax),tmpi2(imax,kmax,tmax),tmpi3(imax,kmax,tmax) )
+        allocate( tmpi4(imax,kmax,tmax),tmpi5(imax,kmax,tmax) )
+        tmp(1:imax,1:tmax) = nan
+        tmpi1(1:imax,1:kmax,1:tmax) = nan
+        tmpi2(1:imax,1:kmax,1:tmax) = nan
+        tmpi3(1:imax,1:kmax,1:tmax) = nan
+        tmpi4(1:imax,1:kmax,1:tmax) = nan
+        tmpi5(1:imax,1:kmax,1:tmax) = nan
      case default
         inx = imax
         iny = 1
@@ -619,8 +637,11 @@ program ncedit
      !
   case (6)
      select case (varname)
-     case ('tzwater')
-        ! Averaged values of the vertical profile of theta and water vapor mixing ratio
+     case ('tzwater','tzqvpert','tzthpert')
+        ! Averaged values of the vertical profile of 
+        !  water condensation contents (qc+qr+qi+qg+qs), 
+        !  perturbation theta, 
+        !  perturbation water vapor mixing ratio
         inx = imax
         iny = jmax
         inz = kmax
@@ -2728,8 +2749,10 @@ program ncedit
         end do
         end do
         end do
-        ista = imax/2 + 1
-        iend = imax/2 + 100
+!        ista = imax/2 + 1
+!        iend = imax/2 + 100
+        ista = imax/2 - 49
+        iend = imax/2 + 150
         do k = 1, kmax, 1
            tmp0 = 0.
            do j = 1, jmax, 1
@@ -2737,17 +2760,184 @@ program ncedit
               tmp0 = tmp0 + tmpi(i,j,k)
            end do
            end do
-           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], 100 km width from the center of domain
+!           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], average 100 km width from the center of domain
+           tmp(t,k) = tmp0/real(200*jmax) ! unit: [kg/kg], average 200 km width from the -50 km of domain
         end do
      end do ! end of t-loop
 
+  case ('tzqvpert')
+     ! t-z axis of horizontally averaged perturbation water vapor mixing ratio
+     ! *** this section work with flag = 6 ***
+     if(flag.ne.6) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        tmpi(:,:,:) = 0. 
+        ! --- read qvpert
+        ivarname = 'qvpert'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- average horizontally
+!        ista = imax/2 + 1
+!        iend = imax/2 + 100
+        ista = imax/2 - 49
+        iend = imax/2 + 150
+        do k = 1, kmax, 1
+           tmp0 = 0.
+           do j = 1, jmax, 1
+           do i = ista, iend, 1
+              tmp0 = tmp0 + tmpi(i,j,k)
+           end do
+           end do
+!           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], average 100 km width from the center of domain
+           tmp(t,k) = tmp0/real(200*jmax) ! unit: [kg/kg], average 200 km width from the -50 km of domain
+        end do
+     end do ! end of t-loop
+
+  case ('tzthpert')
+     ! t-z axis of horizontally averaged perturbation potential temperature
+     ! *** this section work with flag = 6 ***
+     if(flag.ne.6) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        tmpi(:,:,:) = 0. 
+        ! --- read thpert
+        ivarname = 'thpert'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- average horizontally
+!        ista = imax/2 + 1
+!        iend = imax/2 + 100
+        ista = imax/2 - 49
+        iend = imax/2 + 150
+        do k = 1, kmax, 1
+           tmp0 = 0.
+           do j = 1, jmax, 1
+           do i = ista, iend, 1
+              tmp0 = tmp0 + tmpi(i,j,k)
+           end do
+           end do
+!           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], average 100 km width from the center of domain
+           tmp(t,k) = tmp0/real(200*jmax) ! unit: [kg/kg], average 200 km width from the -50 km of domain
+        end do
+     end do ! end of t-loop
+     !
+  case ('cpc','cph')
+     ! Cold pool intensity and height
+     ! *** this section work with flag = 3 ***
+     if(flag.ne.3) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- thpert [K]
+     ivarname = 'thpert'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi1(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- th (t=1) [K]
+     ivarname = 'th'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi2(i,k,t) = var_in(i,1,k,1) ! all the value is set to one for t = 1
+     end do
+     end do
+     end do
+     ! --- qvpert [kg/kg]
+     ivarname = 'qvpert'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi3(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- qc [kg/kg]
+     ivarname = 'qc'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi4(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- qr [kg/kg]
+     ivarname = 'qr'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi5(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! calc. cpc and cph
+     do t = 1, tmax, 1
+     do i = 1, imax, 1
+        tmp(i,t) = 0.0
+        select case (varname)
+        case ('cpc')
+           if(tmpi1(i,1,t).le.-1.)then
+           do k = 1, kmax, 1
+              if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
+                 tmp(i,t) = tmp(i,t)                                &
+                          - 2*9.81*( (tmpi1(i,k,t)/tmpi2(i,k,t))    &
+                                     + 0.608*tmpi3(i,k,t)           &
+                                     - tmpi4(i,k,t)                 &
+                                     - tmpi5(i,k,t) )*(z(k+1)-z(k))
+              end if
+           end do
+           if(tmp(i,t).ne.0.0)then
+              tmp(i,t) = sqrt(tmp(i,t))
+           end if
+           end if
+        case ('cph')
+           if(tmpi1(i,1,t).le.-1.)then
+           do k = 1, kmax, 1
+              if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
+                 tmp(i,t) = z(k)*real(1000.) ! unit: [m]
+              end if
+           end do
+           end if
+        end select
+     end do
+     end do
+     !
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
      if(debug_level.ge.100) print *, "Use default case"
      call getncvar( varname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
-
+     !
   end select
+
 
   ! close netcdf file
   call check( nf90_close(ncid) )
@@ -2972,7 +3162,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-        case ('cape','cin','lfc','lins','thetae','mlthetae','rainrate')
+        case ('cape','cin','lfc','lins','thetae','mlthetae','rainrate','cpc','cph')
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
@@ -3117,10 +3307,12 @@ program ncedit
         !
         ! select one of the 2D array
         select case (varname)
-        case ('tzwater')
-           if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
+        case ('tzwater','tzqvpert')
+           if(debug_level.ge.200) print *, "The tmp array has already allocated for ", trim(varname)
            if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+        case ('tzthpert')
+           if(debug_level.ge.200) print *, "The tmp array has already allocated for ", trim(varname)
         end select
         if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
         
