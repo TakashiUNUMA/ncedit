@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/11/05
+! last modified: 2014/11/06
 !
 
 program ncedit
@@ -190,10 +190,13 @@ program ncedit
      end select
   end if
 
+  ! define area averaging
+  ista = 1
+  iend = imax
 !  ista = imax/2 + 1
 !  iend = imax/2 + 100
-  ista = imax/2 - 49
-  iend = imax/2 + 150
+!  ista = imax/2 - 49
+!  iend = imax/2 + 150
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -206,7 +209,7 @@ program ncedit
 
   ! inquire and get x coordinate
   call check( nf90_inq_varid(ncid, 'ni', xdimid) )
-  if(debug_level.ge.100) print *, "Success: inquire the xdimid"
+  if(debug_level.ge.200) print *, "Success: inquire the xdimid"
   if(debug_level.ge.200) print *, " xdimid        = ", xdimid
 !  call check( nf90_inquire_dimension(ncid, xdimid, len = imax) )
 !  if(debug_level.ge.100) print *, "Success: inquire the xdimid"
@@ -218,7 +221,7 @@ program ncedit
 
   ! inquire and get y coordinate
   call check( nf90_inq_varid(ncid, 'nj', ydimid) )
-  if(debug_level.ge.100) print *, "Success: inquire the ydimid"
+  if(debug_level.ge.200) print *, "Success: inquire the ydimid"
   if(debug_level.ge.200) print *, " ydimid        = ", ydimid
 !  call check( nf90_inquire_dimension(ncid, ydimid, len = jmax) )
 !  if(debug_level.ge.100) print *, "Success: inquire the ydimid"
@@ -230,7 +233,7 @@ program ncedit
 
   ! inquire and get z coordinate
   call check( nf90_inq_varid(ncid, 'nk', zdimid) )
-  if(debug_level.ge.100) print *, "Success: inquire the zdimid"
+  if(debug_level.ge.200) print *, "Success: inquire the zdimid"
   if(debug_level.ge.200) print *, " zdimid        = ", zdimid
 !  call check( nf90_inquire_dimension(ncid, zdimid, len = kmax) )
 !  if(debug_level.ge.100) print *, "Success: inquire the zdimid"
@@ -242,7 +245,7 @@ program ncedit
 
   ! inquire and get time coordinate
   call check( nf90_inq_varid(ncid, 'time', tdimid) )
-  if(debug_level.ge.100) print *, "Success: inquire the tdimid"
+  if(debug_level.ge.200) print *, "Success: inquire the tdimid"
   if(debug_level.ge.200) print *, " tdimid        = ", tdimid
 !  call check( nf90_inquire_dimension(ncid, tdimid, len = tmax) )
 !  if(debug_level.ge.100) print *, "Success: inquire the tdimid"
@@ -659,6 +662,25 @@ program ncedit
         tmp(1:tmax,1:kmax) = 0.
         allocate( tmpi(imax,jmax,kmax) )
         tmpi(1:imax,1:jmax,1:kmax) = 0.
+     end select
+     !
+  case (7)
+     select case (varname)
+     case ('watertave')
+        ! Temporal averaged values of 
+        !  water condensation contents (qc+qr+qi+qg+qs) (x-z)
+        inx = imax
+        iny = 1
+        inz = kmax
+        int = tmax
+        allocate( var_in(imax,1,kmax,tmax) ) ! xzt
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, 1, kmax, tmax /)
+        var_in(1:imax,1,1:kmax,1:tmax) = nan
+        allocate( tmp(imax,kmax) )
+        tmp(1:imax,1:kmax) = 0.
+        allocate( tmpi(imax,kmax,tmax) )
+        tmpi(1:imax,1:kmax,1:tmax) = 0.
      end select
   end select
 
@@ -1471,6 +1493,7 @@ program ncedit
 
   case ('maxrain')
      ! maximum rain rate [mm h^-1]
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1488,7 +1511,7 @@ program ncedit
         ! for t >= 2
         do t = 2, tmax, 1
         do j = 1, jmax, 1
-        do i = 1, imax, 1
+        do i = ista, iend, 1
            tmp0 = (var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.) ! unit [cm] -> [mm/h]
            tmp(t,1) = max(tmp(t,1),tmp0)
         end do
@@ -1499,6 +1522,7 @@ program ncedit
 
   case ('averain')
      ! area-averaged rain rate [mm h^-1]
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1516,7 +1540,6 @@ program ncedit
            tmp0 = 0.
            ipoint = 0
            do j = 1, jmax, 1
-!           do i = 1, imax, 1
            do i = ista, iend, 1
               ! unit [cm] -> [mm/h]
               if ( ((var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.)).ge.0. ) then
@@ -1538,6 +1561,7 @@ program ncedit
 
   case ('apw','apm','aps','ape')
      ! area of precipitation [km^2]
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1568,7 +1592,6 @@ program ncedit
         ! for t >= 2
         do t = 2, tmax, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            tmp0 = (var_in(i,j,t,1) - var_in(i,j,t-1,1))*real(600.) ! unit [cm] -> [mm/h] for dt = 1 min
            if( (tmp0.ge.tmpmin).and.(tmp0.lt.tmpmax) ) tmp(t,1) = tmp(t,1) + 1. ! for dx = 1 km
@@ -1579,6 +1602,7 @@ program ncedit
 
   case ('vtotwcave','vtotwcstd')
      ! mean- and std-variables of the vertical profile of total water- and ice-phase mixing ratio
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1644,14 +1668,12 @@ program ncedit
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
-!           do i = 1, imax, 1
            do i = ista, iend, 1
               tmp0 = tmp0 + tmpi(i,j,t)
            end do
            end do
            end do
-!           tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [kg/kg], full domain
-           tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [kg/kg], 100 km width from the center of domain
+           tmp(k,1) = tmp0/real((iend-ista+1)*jmax*(time_max-time_min+1)) ! unit: [kg/kg]
         case ('vtotwcstd')
            print *, " under construction"
            stop
@@ -1672,6 +1694,7 @@ program ncedit
 
   case ('vwmax','vwave')
      ! maximum- and mean-values of the vertical profile of updraft velocity
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1714,7 +1737,6 @@ program ncedit
            tmp0 = 0.
            do t = time_min, time_max, 1
            do j = 1, jmax, 1
-!           do i = 1, imax, 1
            do i = ista, iend, 1
               if (tmpi(i,j,t).gt.0.) then
                  tmp0 = tmp0 + tmpi(i,j,t)
@@ -1734,6 +1756,7 @@ program ncedit
 
   case ('vthetaave')
      ! A mean-value of the vertical profile of theta
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1764,18 +1787,17 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            tmp0 = tmp0 + tmpi(i,j,t)
         end do
         end do
         end do
-!        tmp(k,1) = tmp0/real(imax*jmax*(time_max-time_min+1)) ! unit: [m/s]
-        tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [m/s]
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax*(time_max-time_min+1)) ! unit: [m/s]
      end do ! end of k-loop
 
   case ('vtheta')
      ! A area-averaged value of the vertical profile of theta
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1794,11 +1816,12 @@ program ncedit
            tmp0 = tmp0 + var_in(i,j,1,1)
         end do
         end do
-        tmp(k,1) = tmp0/real(100*jmax) ! unit: [K]
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax) ! unit: [K]
      end do ! end of k-loop
 
   case ('vqvave')
      ! A mean-value of the vertical profile of water vapor mixing ratio
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1829,17 +1852,17 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            tmp0 = tmp0 + tmpi(i,j,t)
         end do
         end do
         end do
-        tmp(k,1) = tmp0/real(100*jmax*(time_max-time_min+1)) ! unit: [m/s]
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax*(time_max-time_min+1)) ! unit: [m/s]
      end do ! end of k-loop
 
   case ('vqv')
      ! A area-averaged value of the vertical profile of qv
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1858,11 +1881,12 @@ program ncedit
            tmp0 = tmp0 + var_in(i,j,1,1)
         end do
         end do
-        tmp(k,1) = tmp0/real(100*jmax) ! unit: [kg/kg]
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax) ! unit: [kg/kg]
      end do ! end of k-loop
 
   case ('vqvavec')
      ! A mean-value of the vertical profile of water vapor mixing ratio
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1921,7 +1945,6 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            ! cloud area is defined as tmpc >= 0.01 [g/kg]
            if ( tmpc(i,j,t).gt.real(0.01*0.001) ) then
@@ -1940,6 +1963,7 @@ program ncedit
 
   case ('vthetaeave')
      ! A mean-value of the vertical profile of theta-e
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1999,7 +2023,6 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            if (tmpi(i,j,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
@@ -2017,6 +2040,7 @@ program ncedit
 
   case ('vthetae')
      ! A area-averaged value of the vertical profile of theta-e
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2073,11 +2097,12 @@ program ncedit
            tmp0 = tmp0 + tmp4(i,j)
         end do
         end do
-        tmp(k,1) = tmp0/real(100.*jmax)
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
      end do ! end of k-loop
 
   case ('vthetaeavec')
      ! A mean-value of the vertical profile of theta-e inside of clouds
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2164,7 +2189,6 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            ! cloud area is defined as tmpc >= 0.01 [g/kg]
            if ( tmpc(i,j,t).gt.real(0.01*0.001) ) then
@@ -2183,6 +2207,7 @@ program ncedit
 
   case ('vthetav')
      ! A area-averaged value of the vertical profile of virtual theta
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2233,11 +2258,12 @@ program ncedit
            tmp0 = tmp0 + tmp4(i,j)
         end do
         end do
-        tmp(k,1) = tmp0/real(100.*jmax)
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
      end do ! end of k-loop
 
   case ('vrhave')
      ! A mean-value of the vertical profile of relative humidity
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2297,7 +2323,6 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            if (tmpi(i,j,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
@@ -2315,6 +2340,7 @@ program ncedit
 
   case ('vrhavec')
      ! A mean-value of the vertical profile of relative humidity inside of convective clouds
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2401,7 +2427,6 @@ program ncedit
         tmp0 = 0.
         do t = time_min, time_max, 1
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            ! cloud area is defined as tmpc >= 0.01 [g/kg]
            if ( tmpc(i,j,t).gt.real(0.01*0.001) ) then
@@ -2420,6 +2445,7 @@ program ncedit
 
   case ('tthetaeave')
      ! Area and mixed layer averaged value of theta-e
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2482,11 +2508,12 @@ program ncedit
         end do
         end do
         end do
-        tmp(t,1) = tmp0/real(100*jmax*5)
+        tmp(t,1) = tmp0/real((iend-ista+1)*jmax*5)
      end do ! end of t-loop
 
   case ('tqvave')
      ! Area-averaged value of qv
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2511,7 +2538,6 @@ program ncedit
         ipoint = 0
         tmp0 = 0.
         do j = 1, jmax, 1
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            if (tmpi(i,j,t).gt.0.) then
               tmp0 = tmp0 + tmpi(i,j,t)
@@ -2533,6 +2559,7 @@ program ncedit
      !  - mixed-layer convective inhibition [J kg-1]
      !  - lebel of free convection [m]
      !  - lebel of neutral buoyancy [m]
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 only (for now) ***
      if(flag.ne.4) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2583,7 +2610,6 @@ program ncedit
      do t = 1, tmax, 1
         ipoint = 0
         tmp0 = 0.
-!        do i = 1, imax, 1
         do i = ista, iend, 1
            gbcape = 0.
            gbcin  = 0.
@@ -2594,22 +2620,22 @@ program ncedit
                 gbcin,gblclp,gblfcp,gblnbp,gblclz,gblfcz,gblnbz,debug_level,1  )
            select case (varname)
            case ('tcapeave')
-              if(gbcape.gt.0.) then
+              if(gbcape.ge.0.) then
                  tmp0 = tmp0 + gbcape
                  ipoint = ipoint + 1
               end if
            case ('tcinave')
-              if(gbcin.gt.0.) then
+              if(gbcin.ge.0.) then
                  tmp0 = tmp0 + gbcin
                  ipoint = ipoint + 1
               end if
            case ('tlfcave')
-              if(gblfcz.gt.0.) then
+              if(gblfcz.ge.0.) then
                  tmp0 = tmp0 + gblfcz
                  ipoint = ipoint + 1
               end if
            case ('tlnbave')
-              if(gblnbz.gt.0.) then
+              if(gblnbz.ge.0.) then
                  tmp0 = tmp0 + gblnbz
                  ipoint = ipoint + 1
               end if
@@ -2625,6 +2651,7 @@ program ncedit
 
   case ('tzwater')
      ! t-z axis of horizontally averaged total water- and ice-phase mixing ratio
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 6 ***
      if(flag.ne.6) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2692,13 +2719,13 @@ program ncedit
               tmp0 = tmp0 + tmpi(i,j,k)
            end do
            end do
-!           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], average 100 km width from the center of domain
-           tmp(t,k) = tmp0/real(200*jmax) ! unit: [kg/kg], average 200 km width from the -50 km of domain
+           tmp(t,k) = tmp0/real((iend-ista+1)*jmax) ! unit: [kg/kg]
         end do
      end do ! end of t-loop
 
   case ('tzqvpert')
      ! t-z axis of horizontally averaged perturbation water vapor mixing ratio
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 6 ***
      if(flag.ne.6) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2726,13 +2753,13 @@ program ncedit
               tmp0 = tmp0 + tmpi(i,j,k)
            end do
            end do
-!           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], average 100 km width from the center of domain
-           tmp(t,k) = tmp0/real(200*jmax) ! unit: [kg/kg], average 200 km width from the -50 km of domain
+           tmp(t,k) = tmp0/real((iend-ista+1)*jmax) ! unit: [kg/kg]
         end do
      end do ! end of t-loop
 
   case ('tzthpert')
      ! t-z axis of horizontally averaged perturbation potential temperature
+     ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 6 ***
      if(flag.ne.6) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -2760,11 +2787,10 @@ program ncedit
               tmp0 = tmp0 + tmpi(i,j,k)
            end do
            end do
-!           tmp(t,k) = tmp0/real(100*jmax) ! unit: [kg/kg], average 100 km width from the center of domain
-           tmp(t,k) = tmp0/real(200*jmax) ! unit: [kg/kg], average 200 km width from the -50 km of domain
+           tmp(t,k) = tmp0/real((iend-ista+1)*jmax) ! unit: [kg/kg]
         end do
      end do ! end of t-loop
-     !
+
   case ('cpc','cph')
      ! Cold pool intensity and height
      ! *** this section work with flag = 3 ***
@@ -2828,9 +2854,11 @@ program ncedit
         tmp(i,t) = 0.0
         select case (varname)
         case ('cpc')
-           if(tmpi1(i,1,t).le.-1.)then
+!           if(tmpi1(i,1,t).le.-1.)then
+           if(tmpi1(i,1,t).le.-0.1)then
            do k = 1, kmax, 1
-              if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
+!              if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
+              if( (tmpi1(i,k,t).le.-0.1).and.(z(k).le.5.) )then
                  tmp(i,t) = tmp(i,t)                                &
                           - 2*9.81*( (tmpi1(i,k,t)/tmpi2(i,k,t))    &
                                      + 0.608*tmpi3(i,k,t)           &
@@ -2853,7 +2881,75 @@ program ncedit
         end select
      end do
      end do
-     !
+
+  case ('watertave')
+     ! x-z axis of temporally averaged water condansation mixing ratio
+     ! *** this section work with flag = 7 ***
+     if(flag.ne.7) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read qc
+     ivarname = 'qc'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi(i,k,t) = tmpi(i,k,t) + var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- read qr
+     ivarname = 'qr'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi(i,k,t) = tmpi(i,k,t) + var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- read qi
+     ivarname = 'qi'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi(i,k,t) = tmpi(i,k,t) + var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- read qg
+     ivarname = 'qg'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi(i,k,t) = tmpi(i,k,t) + var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- read qs
+     ivarname = 'qs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpi(i,k,t) = tmpi(i,k,t) + var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- average temporally
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp0 = 0.
+        do t = 1, tmax, 1
+           tmp0 = tmp0 + tmpi(i,k,t)
+        end do
+        tmp(i,k) = tmp0/real(tmax) ! unit: [kg/kg]
+     end do ! end of i-loop
+     end do ! end of k-loop
+
   case default
      ! the others
      ! *** this section work with flag = 1, 2, 3, 4, and 5 ***
@@ -3291,6 +3387,79 @@ program ncedit
                  CALL interpo_search_1d( z, iy(j), ipoint)
                  if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
                  do i = 1, tmax, 1
+                    var_out(i,j) = tmp(i,ipoint)
+                 end do
+              end do
+           end select
+        else
+           ! use the values of the original z-coordinate
+           iy(:) = z(:)
+           ! use original data 
+           var_out(:,:) = tmp(:,:)
+        end if
+        if(debug_level.ge.200) print *, " var_out(",xselect,",:) = ", var_out(xselect,:)
+
+     else if(flag.eq.7) then
+        ! x-z
+        if(debug_level.ge.100) print *, "x-z array (time ave.)"
+
+        ! select one of the 2D array
+        select case (varname)
+        case ('watertave')
+           if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
+           if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
+           tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+        end select
+        if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
+        
+        ! ix array
+        if(interp_x.eq.1) then
+           ! interpolate the stretched x-coordinate to constant dx coordinate
+           do k = 1, nx, 1
+              ix(k) = -real(((nx/2)*dx)-(dx/2)) + (k-1)*dx
+           end do
+        else
+           ix(:) = x(:)
+        end if
+        if(debug_level.ge.200) print *, " ix(:)         = ", ix
+
+        ! iy array
+        if(interp_y.eq.1) then
+           ! interpolate the stretched y-coordinate to constant dy coordinate
+           do k = 1, ny, 1
+              iy(k) = (k-1)*dy
+           end do
+           if(debug_level.ge.200) print *, " iy(:)         = ", iy
+
+           if(iy(ny).gt.z(kmax)) then
+              print *, ""
+              print *, "ERROR: iy(ny) exceeds z(kmax)"
+              print *, "        iy(ny)  = ", iy(ny)
+              print *, "        z(kmax) = ", z(kmax)
+              print *, "       iy(ny) should be smaller than or equal to z(kmax)"
+              print *, "*** Please reduce the values of ny or dy ***"
+              print *, ""
+              stop 3
+           end if
+
+           select case (interp_method)
+           case ('linear')
+              ! z coordinate points are linearly interpolated by interp_linear
+              do i = 1, imax
+                 CALL interp_linear( kmax, ny, z, iy, tmp(i,:), var_out(i,:), debug_level )
+              end do
+           case ('near')
+              ! z coordinate points are interpolated by nearest_interp_1d
+              do i = 1, imax
+                 CALL nearest_interp_1d( kmax, z(:), tmp(i,:), ny, iy(:), var_out(i,:) )
+              end do
+           case ('stpk')
+              ! z coordinate points are linearly interpolated by STPK library
+              do j = 2, ny-1, 1
+                 !CALL nearest_search_1d( z, iy(j), ipoint)
+                 CALL interpo_search_1d( z, iy(j), ipoint)
+                 if(debug_level.ge.300) print *, " j,ipoint,iy,y = ", j,ipoint,iy(j),y(ipoint)
+                 do i = 1, imax, 1
                     var_out(i,j) = tmp(i,ipoint)
                  end do
               end do
