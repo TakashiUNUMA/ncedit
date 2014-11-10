@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/11/09
+! last modified: 2014/11/10
 !
 
 program ncedit
@@ -706,6 +706,27 @@ program ncedit
         tmp(1:tmax,1:kmax) = 0.
         allocate( tmpi(imax,jmax,kmax) )
         tmpi(1:imax,1:jmax,1:kmax) = 0.
+     case ('tzthetae')
+        ! Averaged values of the vertical profile of 
+        !  equivalent potential temperature
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmp(tmax,kmax) )
+        tmp(1:tmax,1:kmax) = 0.
+        allocate( tmpi(imax,jmax,kmax) )
+        tmpi(1:imax,1:jmax,1:kmax) = 0.
+        allocate( tmpi1(imax,jmax,kmax) )
+        tmpi1(1:imax,1:jmax,1:kmax) = nan
+        allocate( tmpi2(imax,jmax,kmax) )
+        tmpi2(1:imax,1:jmax,1:kmax) = nan
+        allocate( tmpi3(imax,jmax,kmax) )
+        tmpi3(1:imax,1:jmax,1:kmax) = nan
      end select
      !
   case (7)
@@ -2889,6 +2910,62 @@ program ncedit
         end do
      end do ! end of t-loop
 
+  case ('tzthetae')
+     ! t-z axis of horizontally averaged equivalent potential temperature
+     ! The horizontal averaging depends on ista and iend
+     ! *** this section work with flag = 6 ***
+     if(flag.ne.6) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        tmpi(:,:,:) = 0. 
+        ! --- read prs [Pa]
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi1(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- read theta [K]
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi2(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- read qv [kg/kg]
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi3(i,j,k) = var_in(i,j,k,1)
+           tmp0 = thetaP_2_T( tmpi2(i,j,k), tmpi1(i,j,k) )
+           tmpi(i,j,k) = thetae_Bolton( tmp0, tmpi3(i,j,k), tmpi1(i,j,k) )
+        end do
+        end do
+        end do
+        ! --- calc. horizontally averaged value
+        do k = 1, kmax, 1
+           tmp0 = 0.
+           do j = 1, jmax, 1
+           do i = ista, iend, 1
+              tmp0 = tmp0 + tmpi(i,j,k)
+           end do
+           end do
+           tmp(t,k) = tmp0/real((iend-ista+1)*jmax) ! unit: [kg/kg]
+        end do
+     end do ! end of t-loop
+
   case ('cpc','cph')
      ! Cold pool intensity and height
      ! *** this section work with flag = 3 ***
@@ -3526,7 +3603,7 @@ program ncedit
            if(debug_level.ge.200) print *, "The tmp array has already allocated for ", trim(varname)
            if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
-        case ('tzthpert')
+        case ('tzthpert','tzthetae')
            if(debug_level.ge.200) print *, "The tmp array has already allocated for ", trim(varname)
         end select
         if(debug_level.ge.200) print *, " tmp(",xselect,",:)    = ", tmp(xselect,:)
