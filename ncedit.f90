@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/11/10
+! last modified: 2014/11/27
 !
 
 program ncedit
@@ -444,13 +444,13 @@ program ncedit
         tmp(1:imax,1:tmax) = nan
      case ('xtwater')
         inx = imax
-        iny = 1
+        iny = jmax
         inz = 1
         int = tmax
-        allocate( var_in(imax,1,1,tmax) ) ! xt
-        istart = (/ 1, yselect, zselect, 1 /)
-        icount = (/ imax, 1, 1, tmax /)
-        var_in(1:imax,1,1,1:tmax) = nan
+        allocate( var_in(imax,jmax,1,tmax) ) ! xyt
+        istart = (/ 1, 1, zselect, 1 /)
+        icount = (/ imax, jmax, 1, tmax /)
+        var_in(1:imax,1:jmax,1,1:tmax) = nan
         allocate( tmp(imax,tmax) )
         allocate( tmp1(imax,tmax),tmp2(imax,tmax),tmp3(imax,tmax) )
         allocate( tmp4(imax,tmax),tmp5(imax,tmax) )
@@ -462,13 +462,13 @@ program ncedit
         tmp5(1:imax,1:tmax) = nan
      case ('cxtwater')
         inx = imax
-        iny = 1
+        iny = jmax
         inz = 1
         int = tmax
-        allocate( var_in(imax,1,1,tmax) ) ! xt
-        istart = (/ 1, yselect, zselect, 1 /)
-        icount = (/ imax, 1, 1, tmax /)
-        var_in(1:imax,1,1,1:tmax) = nan
+        allocate( var_in(imax,jmax,1,tmax) ) ! xyt
+        istart = (/ 1, 1, zselect, 1 /)
+        icount = (/ imax, jmax, 1, tmax /)
+        var_in(1:imax,1:jmax,1,1:tmax) = nan
         allocate( tmp(imax,tmax) )
         allocate( tmp1(imax,tmax),tmp2(imax,tmax),tmp3(imax,tmax) )
         allocate( tmp4(imax,tmax),tmp5(imax,tmax) )
@@ -663,6 +663,24 @@ program ncedit
         tmpi5(1:imax,1:kmax,1:tmax) = nan
         allocate( tmp1(imax,tmax) )
         tmp1(1:imax,1:tmax) = 0.
+     case ('tpwave')
+        ! time series of the area-averaged value of pw
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmp(tmax,1) )
+        tmp(1:tmax,1) = 0.
+        allocate( tmpi(imax,jmax,tmax) )
+        tmpi(1:imax,1:jmax,1:tmax) = 0.
+        allocate( tmpi1(imax,jmax,kmax) )
+        tmpi1(1:imax,1:jmax,1:kmax) = 0.
+        allocate( tmpi2(imax,jmax,kmax) )
+        tmpi2(1:imax,1:jmax,1:kmax) = 0.
      case default
         print *, "ERROR: Please define by yourself for ",trim(varname)," on this section"
         stop 1
@@ -746,6 +764,68 @@ program ncedit
         tmp(1:imax,1:kmax) = 0.
         allocate( tmpi(imax,kmax,tmax) )
         tmpi(1:imax,1:kmax,1:tmax) = 0.
+     end select
+     !
+  case (8)
+     select case (varname)
+     case ('webdymf')
+        ! west- and east-boundary mass flux [kg s-1]
+        inx = 1
+        iny = jmax
+        inz = kmax
+        int = 1
+        allocate( var_in(1,jmax,kmax,1) ) ! yz + t-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ 1, jmax, kmax, 1 /)
+        var_in(1,1:jmax,1:kmax,1) = nan
+        allocate( tmp(tmax,4) )
+        tmp(1:tmax,4) = 0.
+        allocate( tmp1(jmax,kmax),tmp2(jmax,kmax),tmp3(jmax,kmax) )
+        tmp1(1:jmax,1:kmax) = 0.
+        tmp2(1:jmax,1:kmax) = 0.
+        tmp3(1:jmax,1:kmax) = 0.
+        allocate( itmp1(kmax),itmp2(kmax) )
+        itmp1(1:kmax) = 0.
+        itmp2(1:kmax) = 0.
+     case ('webdyqvf')
+        ! west- and east-boundary qv flux [kg s-1]
+        inx = 1
+        iny = jmax
+        inz = kmax
+        int = 1
+        allocate( var_in(1,jmax,kmax,1) ) ! yz + t-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ 1, jmax, kmax, 1 /)
+        var_in(1,1:jmax,1:kmax,1) = nan
+        allocate( tmp(tmax,4) )
+        tmp(1:tmax,4) = 0.
+        allocate( tmp1(jmax,kmax),tmp2(jmax,kmax),tmp3(jmax,kmax),tmp4(jmax,kmax) )
+        tmp1(1:jmax,1:kmax) = 0.
+        tmp2(1:jmax,1:kmax) = 0.
+        tmp3(1:jmax,1:kmax) = 0.
+        tmp4(1:jmax,1:kmax) = 0.
+        allocate( itmp1(kmax),itmp2(kmax) )
+        itmp1(1:kmax) = 0.
+        itmp2(1:kmax) = 0.
+     case ('snbdymf')
+        ! south- and north-boundary mass flux [kg s-1]
+        inx = imax
+        iny = jmax
+        inz = 1
+        int = 1
+        allocate( var_in(imax,jmax,1,1) ) ! xy + t-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
+        allocate( tmp(tmax,4) )
+        tmp(1:tmax,4) = 0.
+        allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax) )
+        tmp1(1:imax,1:jmax) = 0.
+        tmp2(1:imax,1:jmax) = 0.
+        tmp3(1:imax,1:jmax) = 0.
+        allocate( itmp1(imax),itmp2(imax) )
+        itmp1(1:imax) = 0.
+        itmp2(1:imax) = 0.
      end select
   end select
 
@@ -2768,6 +2848,63 @@ program ncedit
         if(debug_level.ge.100) print *, "  t,",trim(varname)," = ",t,tmp(t,1)
      end do
 
+  case ('tpwave')
+     ! Calculate as following variables:
+     ! - area-averaged precipitable water [mm]
+     ! The horizontal averaging depends on ista and iend
+     ! *** this section work with flag = 4 only (for now) ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        ! --- read prs [Pa]
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi1(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! --- read qv [kg/kg]
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi2(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+        ! calc. pw [mm]
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpi(i,j,t) = precip_water( tmpi1(i,j,:), tmpi2(i,j,:) )
+        end do
+        end do
+     end do ! end of t-loop
+     ! calc. area-averaged value
+     do t = 1, tmax, 1
+        ipoint = 0
+        tmp0 = 0.
+        do j = 1, jmax
+        do i = ista, iend, 1
+           tmp0 = tmp0 + tmpi(i,j,t)
+           ipoint = ipoint + 1
+        end do
+        end do
+        if(ipoint.gt.0) then
+           tmp(t,1) = tmp0/real(ipoint)
+        else
+           tmp(t,1) = 0.
+        end if
+        if(debug_level.ge.100) print *, "  t,",trim(varname)," = ",t,tmp(t,1)
+     end do ! end of t-loop
+
   case ('tzwater')
      ! t-z axis of horizontally averaged total water- and ice-phase mixing ratio
      ! The horizontal averaging depends on ista and iend
@@ -3144,6 +3281,304 @@ program ncedit
         end if
      end do ! end of t-loop
 
+  case ('webdymf')
+     ! inward and outward mass fluxes of west and east boundaries
+     ! *** this section work with flag = 8 ***
+     if(flag.ne.8) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        ! west boundary
+        ! --- read prs
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp1(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- read th
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp0 = var_in(1,j,k,1)
+           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+           tmp2(j,k) = thetaP_2_T( tmp0, tmp1(j,k) ) ! unit: [K]
+        end do
+        end do
+        ! --- read uinterp
+        ivarname = 'uinterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp3(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- calc. mass fluxes
+        itmp1(:) = 0.0 ! fluxout at west bdy
+        itmp2(:) = 0.0 ! fluxin  at west bdy
+        do k = 1, kmax, 1
+           do j = 1, jmax, 1
+              tmp0 = TP_2_rho( tmp2(j,k), tmp1(j,k) )
+              itmp1(k) = itmp1(k) - min(0.0,tmp0*tmp3(j,k))
+              itmp2(k) = itmp2(k) + max(0.0,tmp0*tmp3(j,k))
+           end do
+           tmp(t,1) = tmp(t,1) + itmp1(k)
+           tmp(t,2) = tmp(t,2) + itmp2(k)
+        end do
+        ! ---
+        ! east boundary
+        istart = (/ imax, 1, 1, t /)
+        ! --- read prs
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp1(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- read th
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp0 = var_in(1,j,k,1)
+           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+           tmp2(j,k) = thetaP_2_T( tmp0, tmp1(j,k) ) ! unit: [K]
+        end do
+        end do
+        ! --- read uinterp
+        ivarname = 'uinterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp3(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- calc. mass fluxes
+        itmp1(:) = 0.0 ! fluxout at east bdy
+        itmp2(:) = 0.0 ! fluxin  at east bdy
+        do k = 1, kmax, 1
+           do j = 1, jmax, 1
+              tmp0 = TP_2_rho( tmp2(j,k), tmp1(j,k) )
+              itmp1(k) = itmp1(k) + max(0.0,tmp0*tmp3(j,k))
+              itmp2(k) = itmp2(k) - min(0.0,tmp0*tmp3(j,k))
+           end do
+           tmp(t,3) = tmp(t,3) + itmp1(k)
+           tmp(t,4) = tmp(t,4) + itmp2(k)
+        end do
+        if(debug_level.ge.100) print *, "  win,eout = ", tmp(t,2),tmp(t,3)
+        if(debug_level.ge.100) print *, "  wout,ein = ", tmp(t,1),tmp(t,4)
+     end do ! end of t-loop
+
+  case ('snbdymf')
+     ! inward and outward mass fluxes of south and north boundaries
+     ! *** this section work with flag = 8 ***
+     if(flag.ne.8) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        ! south boundary
+        ! --- read prs
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read th
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp0 = var_in(i,j,1,1)
+           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+           tmp2(i,j) = thetaP_2_T( tmp0, tmp1(i,j) ) ! unit: [K]
+        end do
+        end do
+        ! --- read winterp
+        ivarname = 'winterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- calc. mass fluxes
+        itmp1(:) = 0.0 ! fluxout at south bdy
+        itmp2(:) = 0.0 ! fluxin  at south bdy
+        do i = 1, imax, 1
+           do j = 1, jmax, 1
+              tmp0 = TP_2_rho( tmp2(i,j), tmp1(i,j) )
+              itmp1(i) = itmp1(i) - min(0.0,tmp0*tmp3(i,j))
+              itmp2(i) = itmp2(i) + max(0.0,tmp0*tmp3(i,j))
+           end do
+           tmp(t,1) = tmp(t,1) + itmp1(i)
+           tmp(t,2) = tmp(t,2) + itmp2(i)
+        end do
+        ! ---
+        ! north boundary
+        istart = (/ 1, 1, kmax, t /)
+        ! --- read prs
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read th
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp0 = var_in(i,j,1,1)
+           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+           tmp2(i,j) = thetaP_2_T( tmp0, tmp1(i,j) ) ! unit: [K]
+        end do
+        end do
+        ! --- read winterp
+        ivarname = 'winterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- calc. mass fluxes
+        itmp1(:) = 0.0 ! fluxout at east bdy
+        itmp2(:) = 0.0 ! fluxin  at east bdy
+        do i = 1, imax, 1
+           do j = 1, jmax, 1
+              tmp0 = TP_2_rho( tmp2(i,j), tmp1(i,j) )
+              itmp1(i) = itmp1(i) + max(0.0,tmp0*tmp3(i,j))
+              itmp2(i) = itmp2(i) - min(0.0,tmp0*tmp3(i,j))
+           end do
+           tmp(t,3) = tmp(t,3) + itmp1(i)
+           tmp(t,4) = tmp(t,4) + itmp2(i)
+        end do
+        if(debug_level.ge.100) print *, "  sin,nout = ", tmp(t,2),tmp(t,3)
+        if(debug_level.ge.100) print *, "  sout,nin = ", tmp(t,1),tmp(t,4)
+     end do ! end of t-loop
+
+  case ('webdyqvf')
+     ! inward and outward qv fluxes of west and east boundaries
+     ! *** this section work with flag = 8 ***
+     if(flag.ne.8) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do t = 1, tmax, 1
+        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)
+        ! west boundary
+        ! --- read prs
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp1(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- read th
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp0 = var_in(1,j,k,1)
+           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+           tmp2(j,k) = thetaP_2_T( tmp0, tmp1(j,k) ) ! unit: [K]
+        end do
+        end do
+        ! --- read uinterp
+        ivarname = 'uinterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp3(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- read qv
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp4(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- calc. qv fluxes
+        itmp1(:) = 0.0 ! fluxout at west bdy
+        itmp2(:) = 0.0 ! fluxin  at west bdy
+        do k = 1, kmax, 1
+           do j = 1, jmax, 1
+              tmp0 = TP_2_rho( tmp2(j,k), tmp1(j,k) )
+              itmp1(k) = itmp1(k) - min(0.0,tmp0*tmp3(j,k)*tmp4(j,k))
+              itmp2(k) = itmp2(k) + max(0.0,tmp0*tmp3(j,k)*tmp4(j,k))
+           end do
+           tmp(t,1) = tmp(t,1) + itmp1(k)
+           tmp(t,2) = tmp(t,2) + itmp2(k)
+        end do
+        ! ---
+        ! east boundary
+        istart = (/ imax, 1, 1, t /)
+        ! --- read prs
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp1(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- read th
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp0 = var_in(1,j,k,1)
+           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+           tmp2(j,k) = thetaP_2_T( tmp0, tmp1(j,k) ) ! unit: [K]
+        end do
+        end do
+        ! --- read uinterp
+        ivarname = 'uinterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp3(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- read qv
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+           tmp4(j,k) = var_in(1,j,k,1)
+        end do
+        end do
+        ! --- calc. qv fluxes
+        itmp1(:) = 0.0 ! fluxout at east bdy
+        itmp2(:) = 0.0 ! fluxin  at east bdy
+        do k = 1, kmax, 1
+           do j = 1, jmax, 1
+              tmp0 = TP_2_rho( tmp2(j,k), tmp1(j,k) )
+              itmp1(k) = itmp1(k) + max(0.0,tmp0*tmp3(j,k)*tmp4(j,k))
+              itmp2(k) = itmp2(k) - min(0.0,tmp0*tmp3(j,k)*tmp4(j,k))
+           end do
+           tmp(t,3) = tmp(t,3) + itmp1(k)
+           tmp(t,4) = tmp(t,4) + itmp2(k)
+        end do
+        if(debug_level.ge.100) print *, " win,eout = ", tmp(t,2),tmp(t,3)
+        if(debug_level.ge.100) print *, " wout,ein = ", tmp(t,1),tmp(t,4)
+     end do ! end of t-loop
+
   case ('watertave')
      ! x-z axis of temporally averaged water condansation mixing ratio
      ! *** this section work with flag = 7 ***
@@ -3230,18 +3665,20 @@ program ncedit
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
   ! make arrays
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
-  if(flag.eq.4) then
+  if((flag.eq.4).or.(flag.eq.8)) then
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! Output 1D file
      ! The following variables are work with this option:
      ! (time series)
      !  "maxrain", "averain", "apw", "apm", "aps", "ape", 
-     !  "tthetaeave", "tqvave", "tcapeave", "tcinave", "tlfcave", "tlnbave", "tcapeavenc", "tcpc"
+     !  "tthetaeave", "tqvave", "tcapeave", "tcinave", "tlfcave", "tlnbave", "tcapeavenc", "tcpc", "tpwave"
      ! (time and area (x-y) averaged vertical profile)
      !  "vtotwcave", "vtotwcstd", "vqvave", "vqvavec", "vthetaeave", "vthetaeavec", 
      !  "vrhave", "vrhavec", "vwmax", "vwave", 
      ! (area averaged vertical profile)
      !  "vtheta", "vqv", "vthetae", "vthetav"
+     ! (time series of mass fluxes on west and east boundry)
+     !  "webdymf", "webdyqvf", "snbdymf"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! create the file
      open(unit=20,file=output)
@@ -3249,7 +3686,7 @@ program ncedit
      
      ! writeout data to output file
      select case (varname)
-     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tcinave','tcapeavenc','tcpc')
+     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tcinave','tcapeavenc','tcpc','tpwave')
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
@@ -3275,6 +3712,11 @@ program ncedit
            write(20,111) z(k), tmp(k,1)
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)
         end do
+     case ('webdymf','snbdymf','webdyqvf')
+        do t = 1, tmax, 1
+           write(20,112) real(time_in(t)/dble(60.)), tmp(t,1),tmp(t,2),tmp(t,3),tmp(t,4)
+           if(debug_level.ge.200) print 223, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1),tmp(t,2),tmp(t,3),tmp(t,4)
+        end do
      end select
      if(debug_level.ge.100) print *, "Success: write out data to the output file"
      
@@ -3285,7 +3727,9 @@ program ncedit
 
      ! formats
 111  format(f8.3,f18.8)
+112  format(f8.3,4f18.8)
 222  format(a22,i5,f8.3,f18.8)
+223  format(a22,i5,f8.3,f18.8)
 
      ! deallocate the allocated arrays in this program
      deallocate( x,y,z,time_in,var_in,tmp )
@@ -4266,6 +4710,166 @@ contains
     return
   end function theta_dry
   
+  real function precip_water( p, qv, undef )  ! 可降水量を計算する. 単位は [kg/m^2]
+    ! 積分範囲は p の要素数の上下端で自動的に指定.
+    ! 気象がわかる数と式より, 高度座標で積分するのではなく,
+    ! 静力学平衡から気圧座標へ置き直して積分.
+    implicit none
+    real, intent(in) :: p(:)  ! 圧力 [Pa]
+    real, intent(in) :: qv(size(p))  ! 水蒸気混合比 [kg/kg]
+    real, intent(in), optional :: undef  ! undef
+    integer :: nx, i
+    real, dimension(size(p)) :: tmp_p, tmp_qv
+    real :: precip
+
+    real, parameter :: g = 9.81
+
+    nx=size(p)
+    
+    !-- 積分のため, 順序の入れ替え
+    do i=1,nx
+       tmp_qv(i)=qv(nx-i+1)
+       tmp_p(i)=p(nx-i+1)
+    end do
+    
+    if(present(undef))then
+       call rectangle_int( tmp_p, tmp_qv, tmp_p(1), tmp_p(nx), precip, undef )
+    else
+       call rectangle_int( tmp_p, tmp_qv, tmp_p(1), tmp_p(nx), precip )
+    end if
+    
+    precip_water=precip/g
+    
+    return
+  end function precip_water
+
+  subroutine rectangle_int( x, y, bot, top, res, undeff )  ! 1 次元台形積分
+    ! 不等間隔でも計算可能であるが, 精度は保証しない.
+    implicit none
+    real, intent(in) :: bot  ! 積分区間左端
+    real, intent(in) :: top  ! 積分区間右端
+    real, intent(in) :: x(:)  ! 積分変数
+    real, intent(in) :: y(size(x))  ! 非積分関数
+    real, intent(inout) :: res  ! 台形積分の積分値
+    real, intent(in), optional :: undeff
+    integer :: i, nx, i_bot, i_top
+    real :: y_bot, y_top
+    
+    nx=size(x)
+    
+    res=0.0
+    
+    !-- bot < top でなければエラー
+    if(bot>top)then
+       write(*,*) "#### ERROR (algebra:rectangle_int) ####"
+       write(*,*) "integrated interval must be bot < top. STOP"
+       stop
+    end if
+    
+    !-- 以下で積分域を決定
+    !-- 実際には, 積分境界に最近する点
+    
+    if(x(1)>=bot)then
+       if(x(1)>bot)then
+          write(*,*) "#### WARNING ####"
+          write(*,*) "there is NOT the bot in the x(i)."  ! このときは, i_bot=1としておいても, x(1)=bot なので, 余分計算はゼロとなり影響はない.
+       end if
+       i_bot=1
+    end if
+    if(x(nx)<=top)then
+       if(x(nx)<top)then
+          write(*,*) "#### WARNING ####"
+          write(*,*) "there is NOT the top in the x(i)."  ! このとき, i_top=nx としても, x(nx)=top なので, 余分計算はゼロとなる.
+       end if
+       i_top=nx
+    end if
+    
+    do i=2,nx-1
+       if(x(i)>=bot)then  ! i_bot は bot - top 内の最も bot に近づく格子
+          i_bot=i
+          exit
+       end if
+    end do
+    
+    do i=nx-1,2,-1
+       if(x(i)<=top)then  ! i_top は bot - top 内の最も top に近づく格子
+          i_top=i
+          exit
+       end if
+    end do
+    
+    !-- 以下で格子に当てはまらない部分を内挿で補完
+    if(present(undeff))then
+       if(i_bot/=1)then
+          if(y(i_bot)/=undeff.and.y(i_bot-1)/=undeff.and.x(i_bot)/=x(i_bot-1))then
+             y_bot=y(i_bot-1) +((y(i_bot)-y(i_bot-1))/(x(i_bot)-x(i_bot-1)))*(bot-x(i_bot-1))
+          else
+             y_bot=-y(i_bot)  ! 最後の積分でゼロにするための措置
+          end if
+       else
+          y_bot=-y(i_bot)  ! 最後の積分でゼロにするための措置
+       end if
+       if(i_top/=nx)then
+          if(y(i_top)/=undeff.and.y(i_top+1)/=undeff.and.x(i_top+1)/=x(i_top))then
+             y_top=y(i_top) +((y(i_top+1)-y(i_top))/(x(i_top+1)-x(i_top)))*(x(i_top+1)-top)
+          else
+             y_top=-y(i_top)
+          end if
+       else
+          y_top=-y(i_top)  ! 最後の積分でゼロにするための措置
+       end if
+    else
+       if(i_bot/=1)then
+          y_bot=y(i_bot-1) +((y(i_bot)-y(i_bot-1))/(x(i_bot)-x(i_bot-1)))*(bot-x(i_bot-1))
+       else
+          y_bot=-y(i_bot)  ! 最後の積分でゼロにするための措置
+       end if
+       if(i_top/=nx)then
+          y_top=y(i_top) +((y(i_top+1)-y(i_top))/(x(i_top+1)-x(i_top)))*(x(i_top+1)-top)
+       else
+          y_top=-y(i_top)  ! 最後の積分でゼロにするための措置
+       end if
+    end if
+    
+    if(i_bot<i_top)then  ! 積分区間内に格子が 2 つ以上あるとき
+       
+       if(present(undeff))then
+          do i=i_bot,i_top-1
+             if(y(i+1)/=undeff.and.y(i)/=undeff)then
+                if(i==i_bot)then
+                   res=res+0.5*(x(i)-bot)*(y(i)+y_bot) +0.5*(x(i+1)-x(i))*(y(i+1)+y(i))
+                   ! 下端の余りと通常の短冊分
+                else
+                   res=res+0.5*(x(i+1)-x(i))*(y(i+1)+y(i))  ! 通常の短冊
+                end if
+             end if
+          end do
+          res=res+0.5*(top-x(i_top))*(y_top+y(i_top))  ! 上端の余りのみ
+       else
+          do i=i_bot,i_top-1
+             if(i==i_bot)then
+                res=res+0.5*(x(i)-bot)*(y(i)+y_bot) +0.5*(x(i+1)-x(i))*(y(i+1)+y(i))
+                ! 下端の余りと通常の短冊分
+             else
+                res=res+0.5*(x(i+1)-x(i))*(y(i+1)+y(i))  ! 通常の短冊
+             end if
+          end do
+          res=res+0.5*(top-x(i_top))*(y_top+y(i_top))  ! 上端の余りのみ
+       end if
+    else
+       if(present(undeff))then
+          if(y(i_bot)/=undeff)then
+             res=res+0.5*(x(i)-bot)*(y(i)+y_bot) +0.5*(top-x(i))*(y_top+y(i))
+          else
+             res=0.5*(top-bot)*(y_top+y_bot)
+          end if
+       else
+          res=res+0.5*(x(i_bot)-bot)*(y(i_bot)+y_bot) +0.5*(top-x(i_bot))*(y_top+y(i_bot))
+       end if
+    end if
+    
+  end subroutine rectangle_int
+
 
 !-----------------------------------------------------------------------
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
