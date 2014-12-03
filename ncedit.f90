@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/11/27
+! last modified: 2014/12/03
 !
 
 program ncedit
@@ -643,6 +643,30 @@ program ncedit
         tmp3(1:imax,1:tmax) = 0.
         tmp4(1:imax,1:tmax) = 0.
         allocate( itmp1(kmax),itmp2(kmax),itmp3(kmax) )
+     case ('tcapeaveus')
+        ! for calculation of upstream CAPE using getcape
+        inx = imax
+        iny = 1
+        inz = kmax
+        int = tmax
+        ista = 1
+        iend = imax/2
+        allocate( var_in(imax,1,kmax,tmax) ) ! xzt
+        istart = (/ 1, yselect, 1, 1 /)
+        icount = (/ imax, 1, kmax, tmax /)
+        var_in(1:imax,1,1:kmax,1:tmax) = nan
+        allocate( tmpc1(imax,kmax,tmax),tmpc2(imax,kmax,tmax),tmpc3(imax,kmax,tmax) )
+        tmpc1(1:imax,1:kmax,1:tmax) = 0.
+        tmpc2(1:imax,1:kmax,1:tmax) = 0.
+        tmpc3(1:imax,1:kmax,1:tmax) = 0.
+        allocate( tmp(tmax,1) )
+        tmp(1:tmax,1) = 0.
+        allocate( tmp1(imax,tmax),tmp2(imax,tmax),tmp3(imax,tmax),tmp4(imax,tmax) )
+        tmp1(1:imax,1:tmax) = 0.
+        tmp2(1:imax,1:tmax) = 0.
+        tmp3(1:imax,1:tmax) = 0.
+        tmp4(1:imax,1:tmax) = 0.
+        allocate( itmp1(kmax),itmp2(kmax),itmp3(kmax) )
      case ('tcpc')
         inx = imax
         iny = 1
@@ -669,6 +693,26 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
+        allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmp(tmax,1) )
+        tmp(1:tmax,1) = 0.
+        allocate( tmpi(imax,jmax,tmax) )
+        tmpi(1:imax,1:jmax,1:tmax) = 0.
+        allocate( tmpi1(imax,jmax,kmax) )
+        tmpi1(1:imax,1:jmax,1:kmax) = 0.
+        allocate( tmpi2(imax,jmax,kmax) )
+        tmpi2(1:imax,1:jmax,1:kmax) = 0.
+     case ('tpwaveus')
+        ! time series of the area-averaged value of pw in the upstream side
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        ista = 1
+        iend = imax/2
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -2748,13 +2792,14 @@ program ncedit
         end if
      end do ! end of t-loop
 
-  case ('tcapeave','tcinave','tlfcave','tlnbave','tcapeavenc')
+  case ('tcapeave','tcinave','tlfcave','tlnbave','tcapeavenc','tcapeaveus')
      ! Calculate as following variables:
      !  - mixed-layer convective available potential energy [J kg-1]
      !  - mixed-layer convective inhibition [J kg-1]
      !  - lebel of free convection [m]
      !  - lebel of neutral buoyancy [m]
      !  - mixed-layer convective available potential energy w/o cold pool [J kg-1]
+     !  - upstream side of mixed-layer convective available potential energy [J kg-1]
      ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 only (for now) ***
      if(flag.ne.4) then
@@ -2838,6 +2883,11 @@ program ncedit
                  tmp0 = tmp0 + tmp1(i,t)
                  ipoint = ipoint + 1
               end if
+           case ('tcapeaveus')
+              if(tmp1(i,t).gt.0.) then
+                 tmp0 = tmp0 + tmp1(i,t)
+                 ipoint = ipoint + 1
+              end if
            end select
         end do
         if(ipoint.gt.0) then
@@ -2848,9 +2898,10 @@ program ncedit
         if(debug_level.ge.100) print *, "  t,",trim(varname)," = ",t,tmp(t,1)
      end do
 
-  case ('tpwave')
+  case ('tpwave','tpwaveus')
      ! Calculate as following variables:
      ! - area-averaged precipitable water [mm]
+     ! - upstream side of area-averaged precipitable water [mm]
      ! The horizontal averaging depends on ista and iend
      ! *** this section work with flag = 4 only (for now) ***
      if(flag.ne.4) then
@@ -3671,7 +3722,7 @@ program ncedit
      ! The following variables are work with this option:
      ! (time series)
      !  "maxrain", "averain", "apw", "apm", "aps", "ape", 
-     !  "tthetaeave", "tqvave", "tcapeave", "tcinave", "tlfcave", "tlnbave", "tcapeavenc", "tcpc", "tpwave"
+     !  "tthetaeave", "tqvave", "tcapeave", "tcinave", "tlfcave", "tlnbave", "tcapeavenc", "tcapeaveus", "tcpc", "tpwave", "tpwaveus"
      ! (time and area (x-y) averaged vertical profile)
      !  "vtotwcave", "vtotwcstd", "vqvave", "vqvavec", "vthetaeave", "vthetaeavec", 
      !  "vrhave", "vrhavec", "vwmax", "vwave", 
@@ -3686,7 +3737,9 @@ program ncedit
      
      ! writeout data to output file
      select case (varname)
-     case ('maxrain','averain','apw','apm','aps','ape','tthetaeave','tqvave','tcapeave','tcinave','tcapeavenc','tcpc','tpwave')
+     case ('maxrain','averain','apw','apm','aps','ape',         &
+           'tthetaeave','tqvave','tcapeave','tcinave',          &
+           'tcapeavenc','tcpc','tpwave','tpwaveus','tcapeaveus' )
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
