@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/12/03
+! last modified: 2014/12/14
 !
 
 program ncedit
@@ -295,7 +295,7 @@ program ncedit
      ! x-z
      select case (varname)
      case ('lwdt')
-        ! for calculation of LWDT in FT88
+        ! for calculation of LWDT in FT98
         inx = imax
         iny = 1
         inz = kmax
@@ -307,7 +307,7 @@ program ncedit
         allocate( tmp(imax,kmax) )
         tmp(1:imax,1:kmax) = 0.
      case ('wadv')
-        ! for calculation of WADV in FT88
+        ! for calculation of WADV in FT98
         inx = imax
         iny = 1
         inz = kmax
@@ -321,7 +321,7 @@ program ncedit
         allocate( tmp1(imax,kmax) )
         tmp1(1:imax,1:kmax) = 0.
      case ('vpga','buoy')
-        ! for calculations of VPGA and BUOY in FT88
+        ! for calculations of VPGA and BUOY in FT98
         inx = imax
         iny = 1
         inz = kmax
@@ -517,6 +517,8 @@ program ncedit
         iny = jmax
         inz = tmax
         int = 1
+        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
+        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
         allocate( var_in(imax,jmax,tmax,1) ) ! xyt
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, tmax, 1 /)
@@ -649,8 +651,8 @@ program ncedit
         iny = 1
         inz = kmax
         int = tmax
-        ista = 1
-        iend = imax/2
+        ista = 28
+        iend = imax/4
         allocate( var_in(imax,1,kmax,tmax) ) ! xzt
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
@@ -711,8 +713,8 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
-        ista = 1
-        iend = imax/2
+        ista = 28
+        iend = imax/4
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -1432,16 +1434,13 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1:2) = ", var_in(1,1,1,1:2)
-!$omp parallel do default(shared) &
-!$omp private(i,k,time_in)
      do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp(i,k) = (var_in(i,1,k,2) - var_in(i,1,k,1)) !/real(time_in()-time_in())
-        end do
+     do i = 1, imax, 1
+        tmp(i,k) = (var_in(i,1,k,2) - var_in(i,1,k,1))/real(60.)
      end do
-!$omp end parallel do
+     end do
 
-  case ('wadv') ! under construction ... 2014/09/18
+  case ('wadv') ! under construction ... 2014/09/18, Fixed 2014/12/14
      ! Calculate WADV [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
@@ -1457,14 +1456,11 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (uinterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-!$omp parallel do default(shared) &
-!$omp private(i,k)
      do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp1(i,k) = var_in(i,1,k,1)
-        end do
+     do i = 1, imax, 1
+        tmp1(i,k) = var_in(i,1,k,1)
      end do
-!$omp end parallel do
+     end do
      ! --- read winterp [m s-1]
      call check( nf90_inq_varid(ncid, "winterp", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1475,15 +1471,18 @@ program ncedit
      if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      do k = 2, kmax-1, 1
-        do i = 2, imax-1, 1
-           tmp(i,k) = - tmp1(i,k)                             &
-                      * (var_in(i+1,1,k,1) - var_in(i,1,k,1)) &
-                      - var_in(i,1,k,1)                       &
-                      * (var_in(i,1,k+1,1) - var_in(i,1,k,1))
-        end do
+     do i = 2, imax-1, 1
+        tmp(i,k) = - tmp1(i,k)                               &
+                   * ( (var_in(i+1,1,k,1) - var_in(i,1,k,1)) &
+                     / ( (x(i+1) - x(i))*1.0d3 ) )           &
+                   - var_in(i,1,k,1)                         &
+                   * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) &
+                     / ( (z(k+1) - z(k))*1.0d3 ) )           ! fixed 2014/12/14
+     end do
+     print *, " rho,dp',dz = ", tmp1(xselect,k), var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), z(k+1)-z(k)
      end do
 
-  case ('vpga') ! under construction ... 2014/09/18
+  case ('vpga') ! under construction ... 2014/09/18, Fixed 2014/12/14
      ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
@@ -1499,14 +1498,11 @@ program ncedit
      call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (th)"
      if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
-!$omp parallel do default(shared) &
-!$omp private(i,k)
      do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp1(i,k) = ivar_in(i,1,k,1)
-        end do
+     do i = 1, imax, 1
+        tmp1(i,k) = ivar_in(i,1,k,1)
      end do
-!$omp end parallel do
+     end do
      ! --- read prs [Pa]
      call check( nf90_inq_varid(ncid, "prs", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1516,23 +1512,17 @@ program ncedit
      call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (prs)"
      if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
-!$omp parallel do default(shared) &
-!$omp private(i,k)
      do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp2(i,k) = ivar_in(i,1,k,1)
-        end do
+     do i = 1, imax, 1
+        tmp2(i,k) = ivar_in(i,1,k,1)
      end do
-!$omp end parallel do
-!$omp parallel do default(shared) &
-!$omp private(i,k,tmp0)
+     end do
      do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp0 = thetaP_2_T( tmp1(i,k), tmp2(i,k) ) ! calculate temperature [K]
-           tmp3(i,k) = TP_2_rho( tmp0, tmp2(i,k) ) ! calculate base state density [kg m-3]
-        end do
+     do i = 1, imax, 1
+        tmp0 = thetaP_2_T( tmp1(i,k), tmp2(i,k) ) ! calculate temperature [K]
+        tmp3(i,k) = TP_2_rho( tmp0, tmp2(i,k) ) ! calculate base state density [kg m-3]
      end do
-!$omp end parallel do
+     end do
      ! --- read prspert [Pa]
      call check( nf90_inq_varid(ncid, "prspert", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1543,13 +1533,15 @@ program ncedit
      if(debug_level.ge.100) print *, "Success: get the var array (prspert)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
      do k = 2, kmax-1, 1
-        do i = 1, imax, 1
-           tmp(i,k) = - ( 1/tmp3(i,k) )                       &
-                      * (var_in(i,1,k+1,1) - var_in(i,1,k,1))
-        end do
+     do i = 1, imax, 1
+        tmp(i,k) = - ( 1/tmp3(i,k) )                         &
+                   * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) &
+                       / ( (z(k+1) - z(k))*1.0d3 ) )         ! fixed 2014/12/14
+     end do
+     !print *, " rho,dp',dz = ", tmp3(xselect,k), var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), z(k+1)-z(k)
      end do
 
-  case ('buoy') ! under construction ... 2014/09/18
+  case ('buoy') ! under construction ... 2014/09/18, Fixed 2014/12/14
      ! Calculate BUOY [-], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
@@ -1565,14 +1557,11 @@ program ncedit
      call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=1)"
      if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
-!$omp parallel do default(shared) &
-!$omp private(i,k)
      do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp1(i,k) = ivar_in(i,1,k,1)
-        end do
+     do i = 1, imax, 1
+        tmp1(i,k) = ivar_in(i,1,k,1)
      end do
-!$omp end parallel do
+     end do
      ! --- read buoyancy [m s-2] (t=tselect)
      call check( nf90_inq_varid(ncid, "buoyancy", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
@@ -1582,14 +1571,11 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=tselect)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-!$omp parallel do default(shared) &
-!$omp private(i,k)
      do k = 1, kmax, 1
-        do i = 1, imax, 1
-           tmp(i,k) = var_in(i,1,k,1) - tmp1(i,k)
-        end do
+     do i = 1, imax, 1
+        tmp(i,k) = var_in(i,1,k,1) - tmp1(i,k)
      end do
-!$omp end parallel do
+     end do
 
   case ('sruinterp')
      ! Calculate storm relative wind speed for the u-component wind
