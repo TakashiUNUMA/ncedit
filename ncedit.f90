@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/12/14
+! last modified: 2014/12/16
 !
 
 program ncedit
@@ -580,6 +580,8 @@ program ncedit
         iny = jmax
         inz = 1
         int = 1
+        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
+        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
         allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, 1, 1 /)
@@ -591,6 +593,24 @@ program ncedit
         tmp2(1:imax,1:jmax) = 0.
         tmp3(1:imax,1:jmax) = 0.
         tmp4(1:imax,1:jmax) = 0.
+     case ('vcape')
+        ! An area-averaged value of the vertical profile of CAPE
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
+        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
+        allocate( var_in(imax,jmax,kmax,1) ) ! xy + z-loop
+        istart = (/ 1, 1, 1, tselect /)
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmp(kmax,1) )
+        tmp(1:kmax,1) = 0.
+        allocate( tmpc1(imax,jmax,kmax),tmpc2(imax,jmax,kmax),tmpc3(imax,jmax,kmax) )
+        tmpc1(1:imax,1:jmax,1:kmax) = nan
+        tmpc2(1:imax,1:jmax,1:kmax) = nan
+        tmpc3(1:imax,1:jmax,1:kmax) = nan
      case ('tthetaeave')
         ! Time series of the area- and mixed layer-averaged value of theta-e
         inx = imax
@@ -2486,6 +2506,61 @@ program ncedit
         tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
      end do ! end of k-loop
 
+  case ('vcape')
+     ! A area-averaged value of the vertical profile of CAPE
+     ! The horizontal averaging depends on ista and iend
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read prs [Pa]
+     ivarname = 'prs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc1(i,j,k) = var_in(i,j,k,1)*real(0.01) ! unit: [hPa]
+     end do
+     end do
+     end do
+     ! --- read theta [K]
+     ivarname = 'th'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmp0 = var_in(i,j,k,1)
+        ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+        tmpc2(i,j,k) = thetaP_2_T( tmp0, tmpc1(i,j,k)*100. ) - t0 ! unit: [degree C]
+     end do
+     end do
+     end do
+     ! --- read qv [kg/kg]
+     ivarname = 'qv'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc3(i,j,k) = var_in(i,j,k,1)
+     end do
+     end do
+     end do
+     do k = 1, kmax
+        ! calculate CAPE, CIN, LFC, and LNB
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = ista, iend, 1
+           CALL getcape( 4,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:), &
+                         gbcape,gbcin,gblclp,gblfcp,gblnbp,gblclz,      &
+                         gblfcz,gblnbz,debug_level,k                    )
+           tmp0 = tmp0 + gbcape
+        end do
+        end do
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
+        print '(a12,x,i3,f8.3,f10.2)', " k,z,cape = ", k,z(k),tmp(k,1)
+     end do ! end of k loop
+
   case ('vrhave')
      ! A mean-value of the vertical profile of relative humidity
      ! The horizontal averaging depends on ista and iend
@@ -3713,7 +3788,7 @@ program ncedit
      !  "vtotwcave", "vtotwcstd", "vqvave", "vqvavec", "vthetaeave", "vthetaeavec", 
      !  "vrhave", "vrhavec", "vwmax", "vwave", 
      ! (area averaged vertical profile)
-     !  "vtheta", "vqv", "vthetae", "vthetav"
+     !  "vtheta", "vqv", "vthetae", "vthetav", "vcape"
      ! (time series of mass fluxes on west and east boundry)
      !  "webdymf", "webdyqvf", "snbdymf"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -3746,7 +3821,7 @@ program ncedit
            write(20,111) z(k), tmp(k,1) ! unit: [m/s]
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [m/s]
         end do
-     case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec','vtheta','vthetae','vthetav')
+     case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec','vtheta','vthetae','vthetav','vcape')
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)
