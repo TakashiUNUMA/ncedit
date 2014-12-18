@@ -306,6 +306,26 @@ program ncedit
         var_in(1:imax,1,1:kmax,1:2) = 0.
         allocate( tmp(imax,kmax) )
         tmp(1:imax,1:kmax) = 0.
+     case ('pwdt')
+        ! for calculation of PWDT (=VPGA+BUOY) in FT98 and TS00
+        inx = imax
+        iny = 1
+        inz = kmax
+        int = 1
+        allocate( var_in(imax,1,kmax,1) ) ! xz
+        istart = (/ 1, yselect, 1, tselect /)
+        icount = (/ imax, 1, kmax, 1 /)
+        var_in(1:imax,1,1:kmax,1) = 0.
+        allocate( ivar_in(imax,1,kmax,1) ) ! for base state (t = 1)
+        iistart = (/ 1, yselect, 1, 1 /)
+        iicount = (/ imax, 1, kmax, 1 /)
+        ivar_in(1:imax,1,1:kmax,1) = 0.
+        allocate( tmp(imax,kmax) )
+        tmp(1:imax,1:kmax) = 0.
+        allocate( tmp1(imax,kmax),tmp2(imax,kmax),tmp3(imax,kmax) )
+        tmp1(1:imax,1:kmax) = nan
+        tmp2(1:imax,1:kmax) = nan
+        tmp3(1:imax,1:kmax) = nan
      case ('wadv','load')
         ! for calculations of WADV and LOAD in FT98 and TS00
         inx = imax
@@ -337,11 +357,8 @@ program ncedit
         allocate( tmp(imax,kmax) )
         tmp(1:imax,1:kmax) = 0.
         allocate( tmp1(imax,kmax),tmp2(imax,kmax) )
-        allocate( tmp3(imax,kmax),tmp4(imax,kmax) )
         tmp1(1:imax,1:kmax) = nan
         tmp2(1:imax,1:kmax) = nan
-        tmp3(1:imax,1:kmax) = nan
-        tmp4(1:imax,1:kmax) = nan
      case ('sruinterp','srvinterp')
         ! for calculations of storm relative wind speed (wind speed - base state)
         inx = imax
@@ -1492,8 +1509,8 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (winterp)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     do k = 2, kmax-1, 1
-     do i = 2, imax-1, 1
+     do k = 1, kmax-1, 1
+     do i = 1, imax-1, 1
         tmp(i,k) = - tmp1(i,k)                               &
                    * ( (var_in(i+1,1,k,1) - var_in(i,1,k,1)) &
                      / ( (x(i+1) - x(i))*1.0d3 ) )           &
@@ -1501,48 +1518,27 @@ program ncedit
                    * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) &
                      / ( (z(k+1) - z(k))*1.0d3 ) )           ! fixed 2014/12/14
      end do
-     print *, " rho,dp',dz = ", tmp1(xselect,k), var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), z(k+1)-z(k)
      end do
 
-  case ('vpga') ! under construction ... 2014/09/18, Fixed 2014/12/14
-     ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1998)
+  case ('pwdt')
+     ! Calculate PWDT [m s-2], which is proposed by Fovell and Tan (1998)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
         stop 2
      end if
-     ! --- read th [K]
-     call check( nf90_inq_varid(ncid, "th", varid) )
+     ! --- read rho [kg m-3] (t = 1) as a base state
+     call check( nf90_inq_varid(ncid, "rho", varid) )
      if(debug_level.ge.100) print *, "Success: inquire the varid"
      if(debug_level.ge.200) print *, " varid         = ", varid
      if(debug_level.ge.300) print *, "  iistart       = ", iistart
      if(debug_level.ge.300) print *, "  iicount       = ", iicount
      call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array (th)"
+     if(debug_level.ge.100) print *, "Success: get the var array (rho, t=1)"
      if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
      do k = 1, kmax, 1
      do i = 1, imax, 1
         tmp1(i,k) = ivar_in(i,1,k,1)
-     end do
-     end do
-     ! --- read prs [Pa]
-     call check( nf90_inq_varid(ncid, "prs", varid) )
-     if(debug_level.ge.100) print *, "Success: inquire the varid"
-     if(debug_level.ge.200) print *, " varid         = ", varid
-     if(debug_level.ge.300) print *, "  iistart       = ", iistart
-     if(debug_level.ge.300) print *, "  iicount       = ", iicount
-     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
-     if(debug_level.ge.100) print *, "Success: get the var array (prs)"
-     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
-     do k = 1, kmax, 1
-     do i = 1, imax, 1
-        tmp2(i,k) = ivar_in(i,1,k,1)
-     end do
-     end do
-     do k = 1, kmax, 1
-     do i = 1, imax, 1
-        tmp0 = thetaP_2_T( tmp1(i,k), tmp2(i,k) ) ! calculate temperature [K]
-        tmp3(i,k) = TP_2_rho( tmp0, tmp2(i,k) ) ! calculate base state density [kg m-3]
      end do
      end do
      ! --- read prspert [Pa]
@@ -1554,17 +1550,86 @@ program ncedit
      call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
      if(debug_level.ge.100) print *, "Success: get the var array (prspert)"
      if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
-     do k = 2, kmax-1, 1
+     ! calculate VPGA as tmp2
+     do k = 1, kmax-1, 1
      do i = 1, imax, 1
-        tmp(i,k) = - ( 1/tmp3(i,k) )                         &
-                   * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) &
-                       / ( (z(k+1) - z(k))*1.0d3 ) )         ! fixed 2014/12/14
+        tmp2(i,k) = - ( 1/tmp1(i,k) )                         &
+                    * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) &
+                        / ( (z(k+1) - z(k))*real(1.0d3) ) )     ! fixed 2014/12/19
      end do
-     !print *, " rho,dp',dz = ", tmp3(xselect,k), var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), z(k+1)-z(k)
+     if(debug_level.ge.200) print *, " vpga,rho,dp',dz = ", tmp2(xselect,k), tmp1(xselect,k), &
+              var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), (z(k+1)-z(k))*real(1.0d3)
+     end do
+     ! --- read buoyancy [m s-2] (t=1)
+     ivar_in(:,:,:,:) = 0.
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=1)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     ! --- read buoyancy [m s-2] (t=tselect)
+     var_in(:,:,:,:) = 0.
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=tselect)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     ! calculate BUOY and PWDT as tmp3 and tmp, respectively
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp3(i,k) = var_in(i,1,k,1) - ivar_in(i,1,k,1)
+        tmp(i,k) = tmp2(i,k) + tmp3(i,k)
+     end do
+     if(debug_level.ge.200) print *, " k,pwdt,vpga,buoy = ", k,tmp(xselect,k),tmp2(xselect,k),tmp3(xselect,k)
+     end do
+
+  case ('vpga') ! under construction ... 2014/09/18, Fixed 2014/12/19
+     ! Calculate VPGA [m s-2], which is proposed by Fovell and Tan (1998)
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read rho [K] (t = 1) as a base state
+     call check( nf90_inq_varid(ncid, "rho", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array  (rho, t=1)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = ivar_in(i,1,k,1)
+     end do
+     end do
+     ! --- read prspert [Pa]
+     call check( nf90_inq_varid(ncid, "prspert", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (prspert)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax-1, 1
+     do i = 1, imax, 1
+        tmp(i,k) = - ( 1/tmp1(i,k) )                         &
+                   * ( (var_in(i,1,k+1,1) - var_in(i,1,k,1)) &
+                       / ( (z(k+1) - z(k))*1.0d3 ) )         ! fixed 2014/12/19
+     end do
+     if(debug_level.ge.200) print *, " rho,dp',dz = ", tmp1(xselect,k), var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), z(k+1)-z(k)
      end do
 
   case ('buoy') ! under construction ... 2014/09/18, Fixed 2014/12/14
-     ! Calculate BUOY [-], which is proposed by Fovell and Tan (1988)
+     ! Calculate BUOY [m s-2], which is proposed by Fovell and Tan (1988)
      ! *** this section work with flag = 2 only (for now) ***
      if(flag.ne.2) then
         print *, "WARNING: flag = ", flag, "is under construction for now..."
@@ -1649,9 +1714,8 @@ program ncedit
      ! calculate the term of water loading in the vertical momentum equation as a diagnostic value
      do k = 1, kmax, 1
      do i = 1, imax, 1
-        tmp(i,k) = - 9.81*tmp1(i,k) ! *real(1.0d3)
+        tmp(i,k) = - 9.81*tmp1(i,k)
      end do
-!     print *, " rho,dp',dz = ", tmp1(xselect,k), var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), z(k+1)-z(k)
      end do
 
   case ('dbdx')
