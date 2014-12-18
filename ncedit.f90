@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/12/16
+! last modified: 2014/12/19
 !
 
 program ncedit
@@ -306,8 +306,8 @@ program ncedit
         var_in(1:imax,1,1:kmax,1:2) = 0.
         allocate( tmp(imax,kmax) )
         tmp(1:imax,1:kmax) = 0.
-     case ('wadv')
-        ! for calculation of WADV in FT98
+     case ('wadv','load')
+        ! for calculations of WADV and LOAD in FT98 and TS00
         inx = imax
         iny = 1
         inz = kmax
@@ -320,7 +320,7 @@ program ncedit
         tmp(1:imax,1:kmax) = 0.
         allocate( tmp1(imax,kmax) )
         tmp1(1:imax,1:kmax) = 0.
-     case ('vpga','buoy')
+     case ('vpga','buoy','dbdx','dbdz')
         ! for calculations of VPGA and BUOY in FT98
         inx = imax
         iny = 1
@@ -782,6 +782,8 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
+        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
+        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -1594,6 +1596,137 @@ program ncedit
      do k = 1, kmax, 1
      do i = 1, imax, 1
         tmp(i,k) = var_in(i,1,k,1) - tmp1(i,k)
+     end do
+     end do
+
+  case ('load')
+     ! Calculate LOAD [m s-2], which is proposed by Takemi and Satomura (2000)
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read qc [kg kg-1]
+     ivarname = 'qc'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = tmp1(i,k) + var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qr [kg kg-1]
+     ivarname = 'qr'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = tmp1(i,k) + var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qi [kg kg-1]
+     ivarname = 'qi'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = tmp1(i,k) + var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qs [kg kg-1]
+     ivarname = 'qs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = tmp1(i,k) + var_in(i,1,k,1)
+     end do
+     end do
+     ! --- read qg [kg kg-1]
+     ivarname = 'qg'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = tmp1(i,k) + var_in(i,1,k,1)
+     end do
+     end do
+     ! calculate the term of water loading in the vertical momentum equation as a diagnostic value
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp(i,k) = - 9.81*tmp1(i,k) ! *real(1.0d3)
+     end do
+!     print *, " rho,dp',dz = ", tmp1(xselect,k), var_in(xselect,1,k+1,1)-var_in(xselect,1,k,1), z(k+1)-z(k)
+     end do
+
+  case ('dbdx')
+     ! Calculate dB/dx [-], which is proposed by Fovell and Tan (1988)
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read buoyancy [m s-2] (t=1)
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=1)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = ivar_in(i,1,k,1)
+     end do
+     end do
+     ! --- read buoyancy [m s-2] (t=tselect)
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=tselect)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax-1, 1
+        tmp(i,k) = &
+             ( (var_in(i+1,1,k,1)-tmp1(i+1,k)) - (var_in(i,1,k,1)-tmp1(i,k)) ) &
+             / ( (x(i+1) - x(i))*0.1 )
+     end do
+     end do
+
+  case ('dbdz')
+     ! Calculate dB/dz [-], which is proposed by Fovell and Tan (1988)
+     ! *** this section work with flag = 2 only (for now) ***
+     if(flag.ne.2) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read buoyancy [m s-2] (t=1)
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  iistart       = ", iistart
+     if(debug_level.ge.300) print *, "  iicount       = ", iicount
+     call check( nf90_get_var(ncid, varid, ivar_in, start = iistart, count = iicount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=1)"
+     if(debug_level.ge.200) print *, " ivar_in(1,1,1,1) = ", ivar_in(1,1,1,1)
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmp1(i,k) = ivar_in(i,1,k,1)
+     end do
+     end do
+     ! --- read buoyancy [m s-2] (t=tselect)
+     call check( nf90_inq_varid(ncid, "buoyancy", varid) )
+     if(debug_level.ge.100) print *, "Success: inquire the varid"
+     if(debug_level.ge.200) print *, " varid         = ", varid
+     if(debug_level.ge.300) print *, "  istart       = ", istart
+     if(debug_level.ge.300) print *, "  icount       = ", icount
+     call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
+     if(debug_level.ge.100) print *, "Success: get the var array (buoyancy, t=tselect)"
+     if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+     do k = 1, kmax-1, 1
+     do i = 1, imax, 1
+        tmp(i,k) = &
+             ( (var_in(i,1,k+1,1)-tmp1(i,k+1)) - (var_in(i,1,k,1)-tmp1(i,k)) ) &
+             / (z(k+1) - z(k))
      end do
      end do
 
@@ -3909,11 +4042,13 @@ program ncedit
            if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
            if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
-        case ('qc','qr','qi','qs','qg')
+        case ('qc','qr','qi','qs','qg','pt01','pt02','pt03')
            tmp(:,:) = var_in(:,1,:,1)
            if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
-        case ('thetae','lwdt','wadv','vpga','buoy','sruinterp','srvinterp')
+        case ('thetae','sruinterp','srvinterp')
+           if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
+        case ('lwdt','wadv','vpga','buoy','load','dbdx','dbdz')
            if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
         case default
            tmp(:,:) = var_in(:,1,:,1)
