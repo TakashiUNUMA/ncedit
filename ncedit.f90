@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/12/19
+! last modified: 2014/12/23
 !
 
 program ncedit
@@ -597,8 +597,8 @@ program ncedit
         iny = jmax
         inz = 1
         int = 1
-        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
-        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
+        ista = imax/2 - 70 ! which is reffered to X = -70 km in the X cordinate
+        iend = imax/2 + 19 ! which is reffered to X = -20 km in the X cordinate
         allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, 1, 1 /)
@@ -616,8 +616,8 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
-        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
-        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
+        ista = imax/2 - 70 ! which is reffered to X = -70 km in the X cordinate
+        iend = imax/2 + 19 ! which is reffered to X = -20 km in the X cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xy + z-loop
         istart = (/ 1, 1, 1, tselect /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -4112,7 +4112,7 @@ program ncedit
            tmp(:,:) = tmp(:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         case ('thetae','sruinterp','srvinterp')
            if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
-        case ('lwdt','wadv','vpga','buoy','load','dbdx','dbdz')
+        case ('lwdt','wadv','vpga','buoy','load','pwdt','dbdx','dbdz')
            if(debug_level.ge.100) print *, "The tmp array has already allocated for ", trim(varname)
         case default
            tmp(:,:) = var_in(:,1,:,1)
