@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2014/12/23
+! last modified: 2015/01/02
 !
 
 program ncedit
@@ -534,8 +534,8 @@ program ncedit
         iny = jmax
         inz = tmax
         int = 1
-        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
-        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
+        ista = imax/2      ! which is reffered to X = 0 km in the X cordinate
+        iend = imax/2 + 20 ! which is reffered to X = +20 km in the X cordinate
         allocate( var_in(imax,jmax,tmax,1) ) ! xyt
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, tmax, 1 /)
@@ -591,14 +591,33 @@ program ncedit
         var_in(1:imax,1:jmax,1,1) = nan
         allocate( tmp(tmax,1) )
         tmp(1:kmax,1) = 0.
-     case ('vthetae','vthetav')
-        ! An area-averaged value of the vertical profile of theta-e and virtual theta
+     case ('vthetae','vthetaes','vthetav')
+        ! An area-averaged value of the vertical profile of theta-e,theta-es, and virtual theta
         inx = imax
         iny = jmax
         inz = 1
         int = 1
-        ista = imax/2 - 70 ! which is reffered to X = -70 km in the X cordinate
-        iend = imax/2 + 19 ! which is reffered to X = -20 km in the X cordinate
+        ista = imax/2 - 90 ! which is reffered to X = -90 km in the X cordinate
+        iend = imax/2 - 39 ! which is reffered to X = -40 km in the X cordinate
+        allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
+        istart = (/ 1, 1, 1, 1 /)
+        icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
+        allocate( tmp(tmax,1) )
+        tmp(1:kmax,1) = 0.
+        allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax),tmp4(imax,jmax) )
+        tmp1(1:imax,1:jmax) = 0.
+        tmp2(1:imax,1:jmax) = 0.
+        tmp3(1:imax,1:jmax) = 0.
+        tmp4(1:imax,1:jmax) = 0.
+     case ('vthetaeca')
+        ! An area-averaged value of the vertical profile of theta-e in the convective area
+        inx = imax
+        iny = jmax
+        inz = 1
+        int = 1
+        ista = imax/2 + 11 ! which is reffered to X = +10 km in the X cordinate
+        iend = imax/2 + 50 ! which is reffered to X = +50 km in the X cordinate
         allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, 1, 1 /)
@@ -616,8 +635,8 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
-        ista = imax/2 - 70 ! which is reffered to X = -70 km in the X cordinate
-        iend = imax/2 + 19 ! which is reffered to X = -20 km in the X cordinate
+        ista = imax/2 - 90 ! which is reffered to X = -90 km in the X cordinate
+        iend = imax/2 - 39 ! which is reffered to X = -40 km in the X cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xy + z-loop
         istart = (/ 1, 1, 1, tselect /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -688,8 +707,8 @@ program ncedit
         iny = 1
         inz = kmax
         int = tmax
-        ista = 28
-        iend = imax/4
+        ista = imax/2 - 70 ! which is reffered to X = -70 km in the X cordinate
+        iend = imax/2 + 19 ! which is reffered to X = -20 km in the X cordinate
         allocate( var_in(imax,1,kmax,tmax) ) ! xzt
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
@@ -750,8 +769,8 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
-        ista = 28
-        iend = imax/4
+        ista = imax/2 - 70 ! which is reffered to X = -70 km in the X cordinate
+        iend = imax/2 + 19 ! which is reffered to X = -20 km in the X cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -799,8 +818,8 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
-        ista = imax/2 - 9  ! which is reffered to X = -10 km in the X cordinate
-        iend = imax/2 + 90 ! which is reffered to X = +90 km in the X cordinate
+        ista = imax/2      ! which is reffered to X = 0 km in the X cordinate
+        iend = imax/2 + 25 ! which is reffered to X = +25 km in the X cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -2503,14 +2522,8 @@ program ncedit
         end do
 !$omp end parallel do
         ! --- read theta [K]
-        call check( nf90_inq_varid(ncid, "th", varid) )
-        if(debug_level.ge.200) print *, "Success: inquire the varid"
-        if(debug_level.ge.200) print *, " varid         = ", varid
-        if(debug_level.ge.300) print *, "  istart       = ", istart
-        if(debug_level.ge.300) print *, "  icount       = ", icount
-        call check( nf90_get_var(ncid, varid, var_in, start = istart, count = icount ) )
-        if(debug_level.ge.200) print *, "Success: get the var array (th)"
-        if(debug_level.ge.200) print *, " var_in(1,1,1,1) = ", var_in(1,1,1,1)
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
 !$omp parallel do default(shared) &
 !$omp private(i,j)
         do j = 1, jmax, 1
@@ -2537,6 +2550,162 @@ program ncedit
         do j = 1, jmax, 1
         do i = ista, iend, 1
            tmp0 = tmp0 + tmp4(i,j)
+        end do
+        end do
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
+     end do ! end of k-loop
+
+  case ('vthetaeca')
+     ! A area-averaged vertical profile of theta-e in the convective area
+     ! The horizontal averaging depends on ista and iend
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, tselect /)
+        ! --- read prs [Pa]
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read theta [K]
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read qv [kg/kg]
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1)
+           tmp0 = thetaP_2_T( tmp2(i,j), tmp1(i,j) )
+           tmp4(i,j) = thetae_Bolton( tmp0, tmp3(i,j), tmp1(i,j) )
+        end do
+        end do
+        tmp1 = 0.
+        ! --- read winterp [m/s]
+        ivarname = 'winterp'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! calc. qt (=qc+qr+qs+qi+qg)
+        tmp2 = 0.
+        ! --- read qc [kg/kg]
+        ivarname = 'qc'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = tmp2(i,j) + var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read qr [kg/kg]
+        ivarname = 'qr'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = tmp2(i,j) + var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read qi [kg/kg]
+        ivarname = 'qi'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = tmp2(i,j) + var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read qs [kg/kg]
+        ivarname = 'qs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = tmp2(i,j) + var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read qg [kg/kg]
+        ivarname = 'qg'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = tmp2(i,j) + var_in(i,j,1,1)
+           tmp2(i,j) = tmp2(i,j)*real(1000.) ! unit [g/kg]
+        end do
+        end do
+        ! calc. mean value
+        tmp0 = 0.
+        ipoint = 0
+        do j = 1, jmax, 1
+        do i = ista, iend, 1
+           ! calc. mean value if the conditions of w_vave > 1.0 [m/s] and qt > 0.01 [g/kg] are satisfied
+!           if( (tmp1(i,j).gt.0.1).and.(tmp2(i,j).gt.0.01) ) then
+           if( (tmp2(i,j).gt.0.01) ) then
+              tmp0 = tmp0 + tmp4(i,j)
+              ipoint = ipoint + 1
+           end if
+        end do
+        end do
+        print *, "  ipoint = ", ipoint
+        if (ipoint.gt.0) then
+           tmp(k,1) = tmp0/real(ipoint)
+        else
+           tmp(k,1) = 0.
+        end if
+     end do ! end of k-loop
+
+  case ('vthetaes')
+     ! A area-averaged value of the vertical profile of theta-es
+     ! The horizontal averaging depends on ista and iend
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do k = 1, kmax, 1
+        if(debug_level.ge.100) print *, " z = ", k
+        istart = (/ 1, 1, k, tselect /)
+        ! --- read prs [Pa]
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read theta [K]
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+!$omp parallel do default(shared) &
+!$omp private(i,j,tmp0)
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp0 = thetaP_2_T( tmp2(i,j), tmp1(i,j) )
+           tmp3(i,j) = thetaes_Bolton( tmp0, tmp1(i,j) )
+        end do
+        end do
+!$omp end parallel do
+        ! calc. mean value
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = ista, iend, 1
+           tmp0 = tmp0 + tmp3(i,j)
         end do
         end do
         tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
@@ -3985,7 +4154,7 @@ program ncedit
      !  "vtotwcave", "vtotwcstd", "vqvave", "vqvavec", "vthetaeave", "vthetaeavec", 
      !  "vrhave", "vrhavec", "vwmax", "vwave", 
      ! (area averaged vertical profile)
-     !  "vtheta", "vqv", "vthetae", "vthetav", "vcape"
+     !  "vtheta", "vqv", "vthetae", "vthetaeca", "vthetaes", "vthetav", "vcape"
      ! (time series of mass fluxes on west and east boundry)
      !  "webdymf", "webdyqvf", "snbdymf"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -4018,7 +4187,8 @@ program ncedit
            write(20,111) z(k), tmp(k,1) ! unit: [m/s]
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [m/s]
         end do
-     case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec','vtheta','vthetae','vthetav','vcape')
+     case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec', &
+           'vtheta','vthetae','vthetaeca','vthetaes','vthetav','vcape')
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)
@@ -4843,6 +5013,20 @@ contains
     
     return
   end function thetae_Bolton
+
+  real function thetaes_Bolton(T,P)  ! Bolton(1980) による手法を用いて飽和相当温位を計算する.
+    implicit none
+    real, intent(in) :: T  ! 温度 [K]
+    real, intent(in) :: P  ! 全圧 [Pa]
+    real :: qvs
+    real, parameter :: a=0.2854, b=0.28, c=3376.0, d=0.81
+    real, parameter :: p0=1.0e5
+    
+    qvs=TP_2_qvs(T,P)
+    thetaes_Bolton=T*((p0/P)**(a*(1.0-b*qvs)))*exp((c/T-2.54)*qvs*(1.0+d*qvs))
+    
+    return
+  end function thetaes_Bolton
   
   real function TqvP_2_TLCL( T, qv, P )  !! 温度と混合比と全圧から T_LCL を計算する
     ! 混合比から水蒸気圧を求め, そこから T_LCL を計算する
