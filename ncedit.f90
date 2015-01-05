@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2015/01/02
+! last modified: 2015/01/05
 !
 
 program ncedit
@@ -495,24 +495,41 @@ program ncedit
         tmp3(1:imax,1:tmax) = nan
         tmp4(1:imax,1:tmax) = nan
         tmp5(1:imax,1:tmax) = nan
-     case ('cpc','cph')
+     case ('pw')
+        ! precipitable water
         inx = imax
         iny = 1
         inz = kmax
         int = tmax
-        allocate( var_in(imax,1,kmax,tmax) ) ! xt
+        allocate( var_in(imax,1,kmax,tmax) ) ! xzt
         istart = (/ 1, yselect, 1, 1 /)
         icount = (/ imax, 1, kmax, tmax /)
         var_in(1:imax,1,1:kmax,1:tmax) = nan
+        allocate( tmpc1(imax,kmax,tmax),tmpc2(imax,kmax,tmax) )
+        tmpc1(1:imax,1:kmax,1:tmax) = nan
+        tmpc2(1:imax,1:kmax,1:tmax) = nan
         allocate( tmp(imax,tmax) )
-        allocate( tmpi1(imax,kmax,tmax),tmpi2(imax,kmax,tmax),tmpi3(imax,kmax,tmax) )
-        allocate( tmpi4(imax,kmax,tmax),tmpi5(imax,kmax,tmax) )
         tmp(1:imax,1:tmax) = nan
-        tmpi1(1:imax,1:kmax,1:tmax) = nan
-        tmpi2(1:imax,1:kmax,1:tmax) = nan
-        tmpi3(1:imax,1:kmax,1:tmax) = nan
-        tmpi4(1:imax,1:kmax,1:tmax) = nan
-        tmpi5(1:imax,1:kmax,1:tmax) = nan
+        !
+     ! case ('cpc','cph')
+     !    inx = imax
+     !    iny = 1
+     !    inz = kmax
+     !    int = tmax
+     !    allocate( var_in(imax,1,kmax,tmax) ) ! xt
+     !    istart = (/ 1, yselect, 1, 1 /)
+     !    icount = (/ imax, 1, kmax, tmax /)
+     !    var_in(1:imax,1,1:kmax,1:tmax) = nan
+     !    allocate( tmp(imax,tmax) )
+     !    allocate( tmpi1(imax,kmax,tmax),tmpi2(imax,kmax,tmax),tmpi3(imax,kmax,tmax) )
+     !    allocate( tmpi4(imax,kmax,tmax),tmpi5(imax,kmax,tmax) )
+     !    tmp(1:imax,1:tmax) = nan
+     !    tmpi1(1:imax,1:kmax,1:tmax) = nan
+     !    tmpi2(1:imax,1:kmax,1:tmax) = nan
+     !    tmpi3(1:imax,1:kmax,1:tmax) = nan
+     !    tmpi4(1:imax,1:kmax,1:tmax) = nan
+     !    tmpi5(1:imax,1:kmax,1:tmax) = nan
+        !
      case default
         inx = imax
         iny = 1
@@ -637,6 +654,24 @@ program ncedit
         int = 1
         ista = imax/2 - 90 ! which is reffered to X = -90 km in the X cordinate
         iend = imax/2 - 39 ! which is reffered to X = -40 km in the X cordinate
+        allocate( var_in(imax,jmax,kmax,1) ) ! xy + z-loop
+        istart = (/ 1, 1, 1, tselect /)
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmp(kmax,1) )
+        tmp(1:kmax,1) = 0.
+        allocate( tmpc1(imax,jmax,kmax),tmpc2(imax,jmax,kmax),tmpc3(imax,jmax,kmax) )
+        tmpc1(1:imax,1:jmax,1:kmax) = nan
+        tmpc2(1:imax,1:jmax,1:kmax) = nan
+        tmpc3(1:imax,1:jmax,1:kmax) = nan
+     case ('vcapeca')
+        ! An area-averaged value of the vertical profile of CAPE in the convective area
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        ista = imax/2 + 11 ! which is reffered to X = +10 km in the X cordinate
+        iend = imax/2 + 50 ! which is reffered to X = +50 km in the X cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xy + z-loop
         istart = (/ 1, 1, 1, tselect /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -818,8 +853,8 @@ program ncedit
         iny = jmax
         inz = kmax
         int = 1
-        ista = imax/2      ! which is reffered to X = 0 km in the X cordinate
-        iend = imax/2 + 25 ! which is reffered to X = +25 km in the X cordinate
+        ista = imax/2 +  1 ! which is reffered to X = 1 km in the X cordinate
+        iend = imax/2 + 50 ! which is reffered to X = 50 km in the X cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -1475,6 +1510,40 @@ program ncedit
         if(debug_level.ge.200) print *, "  t,",trim(varname)," = ",t,tmp(xselect,t)
         end do
 !$omp end parallel do
+
+  case ('pw')
+     ! Calculate precipitable water [mm]
+     ! *** this section work with flag = 3 only (for now) ***
+     if(flag.ne.3) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read prs [Pa]
+     ivarname = 'prs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpc1(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! --- read qv [kg/kg]
+     ivarname = 'qv'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do t = 1, tmax, 1
+     do k = 1, kmax, 1
+     do i = 1, imax, 1
+        tmpc2(i,k,t) = var_in(i,1,k,t)
+     end do
+     end do
+     end do
+     ! calc. pw [mm]
+     do t = 1, tmax, 1
+     do i = 1, imax, 1
+        tmp(i,t) = precip_water( tmpc1(i,:,t), tmpc2(i,:,t) )
+     end do
+     end do
 
   case ('lwdt') ! under construction ... 2014/09/18
      ! Calculate LWDT [m s-2], which is proposed by Fovell and Tan (1998)
@@ -2927,6 +2996,61 @@ program ncedit
         print '(a12,x,i3,f8.3,f10.2)', " k,z,cape = ", k,z(k),tmp(k,1)
      end do ! end of k loop
 
+  case ('vcapeca')
+     ! A area-averaged value of the vertical profile of CAPE in the convective area
+     ! The horizontal averaging depends on ista and iend
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     ! --- read prs [Pa]
+     ivarname = 'prs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc1(i,j,k) = var_in(i,j,k,1)*real(0.01) ! unit: [hPa]
+     end do
+     end do
+     end do
+     ! --- read theta [K]
+     ivarname = 'th'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmp0 = var_in(i,j,k,1)
+        ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+        tmpc2(i,j,k) = thetaP_2_T( tmp0, tmpc1(i,j,k)*100. ) - t0 ! unit: [degree C]
+     end do
+     end do
+     end do
+     ! --- read qv [kg/kg]
+     ivarname = 'qv'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc3(i,j,k) = var_in(i,j,k,1)
+     end do
+     end do
+     end do
+     do k = 1, kmax
+        ! calculate CAPE, CIN, LFC, and LNB
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = ista, iend, 1
+           CALL getcape( 4,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:), &
+                         gbcape,gbcin,gblclp,gblfcp,gblnbp,gblclz,      &
+                         gblfcz,gblnbz,debug_level,k                    )
+           tmp0 = tmp0 + gbcape
+        end do
+        end do
+        tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
+        print '(a12,x,i3,f8.3,f10.2)', " k,z,cape = ", k,z(k),tmp(k,1)
+     end do ! end of k loop
+
   case ('vrhave')
      ! A mean-value of the vertical profile of relative humidity
      ! The horizontal averaging depends on ista and iend
@@ -3581,96 +3705,96 @@ program ncedit
         end do
      end do ! end of t-loop
 
-  case ('cpc','cph')
-     ! Cold pool intensity and height
-     ! *** this section work with flag = 3 ***
-     if(flag.ne.3) then
-        print *, "WARNING: flag = ", flag, "is under construction for now..."
-        stop 2
-     end if
-     ! --- thpert [K]
-     ivarname = 'thpert'
-     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
-     do t = 1, tmax, 1
-     do k = 1, kmax, 1
-     do i = 1, imax, 1
-        tmpi1(i,k,t) = var_in(i,1,k,t)
-     end do
-     end do
-     end do
-     ! --- th (t=1) [K]
-     ivarname = 'th'
-     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
-     do t = 1, tmax, 1
-     do k = 1, kmax, 1
-     do i = 1, imax, 1
-        tmpi2(i,k,t) = var_in(i,1,k,1) ! all the value is set to one for t = 1
-     end do
-     end do
-     end do
-     ! --- qvpert [kg/kg]
-     ivarname = 'qvpert'
-     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
-     do t = 1, tmax, 1
-     do k = 1, kmax, 1
-     do i = 1, imax, 1
-        tmpi3(i,k,t) = var_in(i,1,k,t)
-     end do
-     end do
-     end do
-     ! --- qc [kg/kg]
-     ivarname = 'qc'
-     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
-     do t = 1, tmax, 1
-     do k = 1, kmax, 1
-     do i = 1, imax, 1
-        tmpi4(i,k,t) = var_in(i,1,k,t)
-     end do
-     end do
-     end do
-     ! --- qr [kg/kg]
-     ivarname = 'qr'
-     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
-     do t = 1, tmax, 1
-     do k = 1, kmax, 1
-     do i = 1, imax, 1
-        tmpi5(i,k,t) = var_in(i,1,k,t)
-     end do
-     end do
-     end do
-     ! calc. cpc and cph
-     do t = 1, tmax, 1
-     do i = 1, imax, 1
-        tmp(i,t) = 0.0
-        select case (varname)
-        case ('cpc')
-           if(tmpi1(i,1,t).le.-1.)then
-!           if(tmpi1(i,1,t).le.-0.1)then
-           do k = 1, kmax, 1
-              if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
-!              if( (tmpi1(i,k,t).le.-0.1).and.(z(k).le.5.) )then
-                 tmp(i,t) = tmp(i,t)                                &
-                          - 2*9.81*( (tmpi1(i,k,t)/tmpi2(i,k,t))    &
-                                     + 0.608*tmpi3(i,k,t)           &
-                                     - tmpi4(i,k,t)                 &
-                                     - tmpi5(i,k,t) )*(z(k+1)-z(k))
-              end if
-           end do
-           if(tmp(i,t).ne.0.0)then
-              tmp(i,t) = sqrt(tmp(i,t))
-           end if
-           end if
-        case ('cph')
-           if(tmpi1(i,1,t).le.-1.)then
-           do k = 1, kmax, 1
-              if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
-                 tmp(i,t) = z(k)*real(1000.) ! unit: [m]
-              end if
-           end do
-           end if
-        end select
-     end do
-     end do
+!   case ('cpc','cph')
+!      ! Cold pool intensity and height
+!      ! *** this section work with flag = 3 ***
+!      if(flag.ne.3) then
+!         print *, "WARNING: flag = ", flag, "is under construction for now..."
+!         stop 2
+!      end if
+!      ! --- thpert [K]
+!      ivarname = 'thpert'
+!      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!      do t = 1, tmax, 1
+!      do k = 1, kmax, 1
+!      do i = 1, imax, 1
+!         tmpi1(i,k,t) = var_in(i,1,k,t)
+!      end do
+!      end do
+!      end do
+!      ! --- th (t=1) [K]
+!      ivarname = 'th'
+!      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!      do t = 1, tmax, 1
+!      do k = 1, kmax, 1
+!      do i = 1, imax, 1
+!         tmpi2(i,k,t) = var_in(i,1,k,1) ! all the value is set to one for t = 1
+!      end do
+!      end do
+!      end do
+!      ! --- qvpert [kg/kg]
+!      ivarname = 'qvpert'
+!      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!      do t = 1, tmax, 1
+!      do k = 1, kmax, 1
+!      do i = 1, imax, 1
+!         tmpi3(i,k,t) = var_in(i,1,k,t)
+!      end do
+!      end do
+!      end do
+!      ! --- qc [kg/kg]
+!      ivarname = 'qc'
+!      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!      do t = 1, tmax, 1
+!      do k = 1, kmax, 1
+!      do i = 1, imax, 1
+!         tmpi4(i,k,t) = var_in(i,1,k,t)
+!      end do
+!      end do
+!      end do
+!      ! --- qr [kg/kg]
+!      ivarname = 'qr'
+!      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!      do t = 1, tmax, 1
+!      do k = 1, kmax, 1
+!      do i = 1, imax, 1
+!         tmpi5(i,k,t) = var_in(i,1,k,t)
+!      end do
+!      end do
+!      end do
+!      ! calc. cpc and cph
+!      do t = 1, tmax, 1
+!      do i = 1, imax, 1
+!         tmp(i,t) = 0.0
+!         select case (varname)
+!         case ('cpc')
+!            if(tmpi1(i,1,t).le.-1.)then
+! !           if(tmpi1(i,1,t).le.-0.1)then
+!            do k = 1, kmax, 1
+!               if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
+! !              if( (tmpi1(i,k,t).le.-0.1).and.(z(k).le.5.) )then
+!                  tmp(i,t) = tmp(i,t)                                &
+!                           - 2*9.81*( (tmpi1(i,k,t)/tmpi2(i,k,t))    &
+!                                      + 0.608*tmpi3(i,k,t)           &
+!                                      - tmpi4(i,k,t)                 &
+!                                      - tmpi5(i,k,t) )*(z(k+1)-z(k))
+!               end if
+!            end do
+!            if(tmp(i,t).ne.0.0)then
+!               tmp(i,t) = sqrt(tmp(i,t))
+!            end if
+!            end if
+!         case ('cph')
+!            if(tmpi1(i,1,t).le.-1.)then
+!            do k = 1, kmax, 1
+!               if( (tmpi1(i,k,t).le.-1.).and.(z(k).le.5.) )then
+!                  tmp(i,t) = z(k)*real(1000.) ! unit: [m]
+!               end if
+!            end do
+!            end if
+!         end select
+!      end do
+!      end do
 
   case ('tcpc')
      ! Area-averaged Cold pool intensity
@@ -4154,7 +4278,7 @@ program ncedit
      !  "vtotwcave", "vtotwcstd", "vqvave", "vqvavec", "vthetaeave", "vthetaeavec", 
      !  "vrhave", "vrhavec", "vwmax", "vwave", 
      ! (area averaged vertical profile)
-     !  "vtheta", "vqv", "vthetae", "vthetaeca", "vthetaes", "vthetav", "vcape"
+     !  "vtheta", "vqv", "vthetae", "vthetaeca", "vthetaes", "vthetav", "vcape", "vcapeca"
      ! (time series of mass fluxes on west and east boundry)
      !  "webdymf", "webdyqvf", "snbdymf"
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -4188,7 +4312,8 @@ program ncedit
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [m/s]
         end do
      case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec', &
-           'vtheta','vthetae','vthetaeca','vthetaes','vthetav','vcape')
+           'vtheta','vthetav', 'vthetae','vthetaeca','vthetaes',      &
+           'vcape','vcapeca')
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)
@@ -4376,7 +4501,7 @@ program ncedit
            end do
            if(debug_level.ge.200) print *, "t,iy,var_out = ",t,iy(t),var_out(xselect,t)
            end do
-        case ('cape','cin','lins','thetae','mlthetae','rainrate','cpc')
+        case ('cape','cin','lins','thetae','mlthetae','rainrate','cpc','pw')
            do t = 1, tmax, 1
            do i = 1, imax, 1
               var_out(i,t) = tmp(i,t)
