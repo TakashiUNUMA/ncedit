@@ -38,7 +38,7 @@ program ncedit
   real, dimension(:),       allocatable :: yy, itmp1, itmp2, itmp3
   real, dimension(:,:),     allocatable :: tmp, tmp1, tmp2, tmp3, tmp4, tmp5
   real, dimension(:,:,:),   allocatable :: tmpi, tmpi1, tmpi2, tmpi3, tmpi4, tmpi5
-  real, dimension(:,:,:),   allocatable :: tmpc, tmpc1, tmpc2, tmpc3
+  real, dimension(:,:,:),   allocatable :: tmpc, tmpc1, tmpc2, tmpc3, tmpc4, tmpc5
   real, dimension(:,:,:,:), allocatable :: ivar_in, tmp4d, tmp4d1, tmp4d2, tmp4d3
   real, parameter :: pi = 3.14159265
   real, parameter :: t0 = 273.15
@@ -679,9 +679,12 @@ program ncedit
         allocate( tmp(kmax,1) )
         tmp(1:kmax,1) = 0.
         allocate( tmpc1(imax,jmax,kmax),tmpc2(imax,jmax,kmax),tmpc3(imax,jmax,kmax) )
+        allocate( tmpc4(imax,jmax,kmax),tmpc5(imax,jmax,kmax) )
         tmpc1(1:imax,1:jmax,1:kmax) = nan
         tmpc2(1:imax,1:jmax,1:kmax) = nan
         tmpc3(1:imax,1:jmax,1:kmax) = nan
+        tmpc4(1:imax,1:jmax,1:kmax) = 0.
+        tmpc5(1:imax,1:jmax,1:kmax) = 0.
      case ('tthetaeave')
         ! Time series of the area- and mixed layer-averaged value of theta-e
         inx = imax
@@ -2633,7 +2636,6 @@ program ncedit
         stop 2
      end if
      do k = 1, kmax, 1
-        if(debug_level.ge.100) print *, " z = ", k
         istart = (/ 1, 1, k, tselect /)
         ! --- read prs [Pa]
         ivarname = 'prs'
@@ -2720,18 +2722,19 @@ program ncedit
         do i = ista, iend, 1
            ! calc. mean value if the conditions of w_vave > 1.0 [m/s] and qt > 0.01 [g/kg] are satisfied
 !           if( (tmp1(i,j).gt.0.1).and.(tmp2(i,j).gt.0.01) ) then
+           ! calc. mean value if the condition of qt > 0.01 [g/kg] is satisfied
            if( (tmp2(i,j).gt.0.01) ) then
               tmp0 = tmp0 + tmp4(i,j)
               ipoint = ipoint + 1
            end if
         end do
         end do
-        print *, "  ipoint = ", ipoint
         if (ipoint.gt.0) then
            tmp(k,1) = tmp0/real(ipoint)
         else
            tmp(k,1) = 0.
         end if
+        print '(a21,i3,i6,f8.2,f10.2)', " k,ipoint,z,eptca = ", k,ipoint,z(k),tmp(k,1)
      end do ! end of k-loop
 
   case ('vthetaes')
@@ -3036,19 +3039,96 @@ program ncedit
      end do
      end do
      end do
+     ! variables for defining convective area
+     tmpc4 = 0.
+     ! --- read winterp [m/s]
+     ivarname = 'winterp'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc4(i,j,k) = var_in(i,j,k,1)
+     end do
+     end do
+     end do
+     ! calc. qt (=qc+qr+qs+qi+qg)
+     tmpc5 = 0.
+     ! --- read qc [kg/kg]
+     ivarname = 'qc'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc5(i,j,k) = var_in(i,j,k,1)
+     end do
+     end do
+     end do
+     ! --- read qr [kg/kg]
+     ivarname = 'qr'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc5(i,j,k) = tmpc5(i,j,k) + var_in(i,j,k,1)
+     end do
+     end do
+     end do
+     ! --- read qi [kg/kg]
+     ivarname = 'qi'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc5(i,j,k) = tmpc5(i,j,k) + var_in(i,j,k,1)
+     end do
+     end do
+     end do
+     ! --- read qs [kg/kg]
+     ivarname = 'qs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc5(i,j,k) = tmpc5(i,j,k) + var_in(i,j,k,1)
+     end do
+     end do
+     end do
+     ! --- read qg [kg/kg]
+     ivarname = 'qg'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpc5(i,j,k) = tmpc5(i,j,k) + var_in(i,j,k,1)
+        tmpc5(i,j,k) = tmpc5(i,j,k)*real(1000.) ! unit [g/kg]
+     end do
+     end do
+     end do
+     ! calc. area-averaged CAPE within the convective area
      do k = 1, kmax
-        ! calculate CAPE, CIN, LFC, and LNB
         tmp0 = 0.
+        ipoint = 0
         do j = 1, jmax, 1
         do i = ista, iend, 1
            CALL getcape( 4,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:), &
                          gbcape,gbcin,gblclp,gblfcp,gblnbp,gblclz,      &
                          gblfcz,gblnbz,debug_level,k                    )
-           tmp0 = tmp0 + gbcape
+!           print *, "  i,j,cape,qt = ", i,j,gbcape,tmpc5(i,j,k)
+           ! calc. mean value if the conditions of w_vave > 1.0 [m/s] and qt > 0.01 [g/kg] are satisfied
+!           if( (tmpc4(i,j,k).gt.0.1).and.(tmpc5(i,j,k).gt.0.01) ) then
+           ! calc. mean value if the condition of qt > 0.01 [g/kg] is satisfied
+           if( (tmpc5(i,j,k).gt.0.01) ) then
+              tmp0 = tmp0 + gbcape
+              ipoint = ipoint + 1
+           end if
         end do
         end do
-        tmp(k,1) = tmp0/real((iend-ista+1)*jmax)
-        print '(a12,x,i3,f8.3,f10.2)', " k,z,cape = ", k,z(k),tmp(k,1)
+        if (ipoint.gt.0) then
+           tmp(k,1) = tmp0/real(ipoint)
+        else
+           tmp(k,1) = 0.
+        end if
+        print '(a22,i3,i6,f8.2,f10.2)', " k,ipoint,z,capeca = ", k,ipoint,z(k),tmp(k,1)
      end do ! end of k loop
 
   case ('vrhave')
