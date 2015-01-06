@@ -27,7 +27,7 @@ program ncedit
   ! local variables
   character(len=20) :: ivarname
   integer :: i, j, k, t, ipoint, nx, ny
-  integer :: inx, iny, inz, int, ista, iend
+  integer :: inx, iny, inz, int, ista, iend, jsta, jend
   integer :: time_min, time_max
   integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
   integer, dimension(2) :: ostart, ocount, dimids, chunks
@@ -197,6 +197,9 @@ program ncedit
 !  iend = imax/2 + 100
 !  ista = imax/2 - 49
 !  iend = imax/2 + 150
+
+  jsta = 1
+  jend = jmax
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -858,6 +861,8 @@ program ncedit
         int = 1
         ista = imax/2 +  1 ! which is reffered to X = 1 km in the X cordinate
         iend = imax/2 + 50 ! which is reffered to X = 50 km in the X cordinate
+        jsta = jmax/2 - 30 ! which is reffered to Y = -30 km in the Y cordinate
+        jend = jmax/2 + 30 ! which is reffered to Y = +30 km in the Y cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -3652,12 +3657,14 @@ program ncedit
         ! --- calc. horizontally averaged value
         do k = 1, kmax, 1
            tmp0 = 0.
-           do j = 1, jmax, 1
+!           do j = 1, jmax, 1
+           do j = jsta, jend, 1
            do i = ista, iend, 1
               tmp0 = tmp0 + tmpi(i,j,k)
            end do
            end do
-           tmp(t,k) = tmp0/real((iend-ista+1)*jmax) ! unit: [kg/kg]
+!           tmp(t,k) = tmp0/real((iend-ista+1)*jmax) ! unit: [kg/kg]
+           tmp(t,k) = tmp0/real((iend-ista+1)*(jend-jsta+1)) ! unit: [kg/kg]
         end do
      end do ! end of t-loop
 
