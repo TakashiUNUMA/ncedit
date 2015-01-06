@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2015/01/05
+! last modified: 2015/01/06
 !
 
 program ncedit
@@ -18,8 +18,9 @@ program ncedit
   real :: dx, dy, angle
   real, dimension(:),       allocatable :: x, y, z, time_in
   real, dimension(:,:,:,:), allocatable :: var_in
-  real, dimension(:),       allocatable :: ix, iy
+  real, dimension(:),       allocatable :: ix, iy, iz
   real, dimension(:,:),     allocatable :: var_out
+  real, dimension(:,:,:),   allocatable :: var_out3d
   character(len=20) :: varname, interp_method, output_type
   character(len=42) :: input, output
   integer :: deflate_level, debug_level
@@ -29,7 +30,7 @@ program ncedit
   integer :: i, j, k, t, ipoint, nx, ny
   integer :: inx, iny, inz, int, ista, iend, jsta, jend
   integer :: time_min, time_max
-  integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid
+  integer :: ncid, varid, xdimid, ydimid, zdimid, tdimid, xvarid, yvarid, zvarid
   integer, dimension(2) :: ostart, ocount, dimids, chunks
   integer, dimension(4) :: istart, icount, iistart, iicount
   integer, dimension(2) :: ipoints
@@ -190,14 +191,15 @@ program ncedit
      end select
   end if
 
-  ! define area averaging
+  ! define specified area to output an area-averaged value
+  ! x-direction
   ista = 1
   iend = imax
 !  ista = imax/2 + 1
 !  iend = imax/2 + 100
 !  ista = imax/2 - 49
 !  iend = imax/2 + 150
-
+  ! y-direction
   jsta = 1
   jend = jmax
 
@@ -547,6 +549,7 @@ program ncedit
      end select
      !
   case (4)
+     ! time series data or area-averaged vertical profiles
      select case (varname)
      case ('maxrain','averain','apw','apm','aps','ape')
         ! a variable for time series
@@ -849,6 +852,7 @@ program ncedit
      tmp(1:imax,1:kmax) = nan
      !
   case (6)
+     ! t-z
      select case (varname)
      case ('tzwater','tzqvpert','tzthpert')
         ! Averaged values of the vertical profile of 
@@ -895,6 +899,7 @@ program ncedit
      end select
      !
   case (7)
+     ! temporal-averagd x-z
      select case (varname)
      case ('watertave')
         ! Temporal averaged values of 
@@ -914,6 +919,7 @@ program ncedit
      end select
      !
   case (8)
+     ! mass fluxes at boundaries
      select case (varname)
      case ('webdymf')
         ! west- and east-boundary mass flux [kg s-1]
@@ -973,6 +979,23 @@ program ncedit
         allocate( itmp1(imax),itmp2(imax) )
         itmp1(1:imax) = 0.
         itmp2(1:imax) = 0.
+     end select
+     !
+  case (9)
+     ! 3D output
+     select case (varname)
+     case ('water3d')
+        ! water condensation contents (qc+qr+qi+qg+qs)
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        allocate( var_in(imax,jmax,kmax,1) ) ! xyz
+        istart = (/ 1, 1, 1, tselect /)
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmpi(1:imax,1:jmax,1:kmax) )
+        tmpi(1:imax,1:jmax,1:kmax) = 0.
      end select
   end select
 
@@ -1182,6 +1205,80 @@ program ncedit
         end do
 !$omp end parallel do
      end select
+
+  case ('water3d')
+     ! The section for all water (qc+qr+qi+qc+qg) on the microphysics processes
+     ! *** this section work with flag = 9 only (for now) ***
+     if( flag.ne.9 ) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     tmpi = 0.
+     ! --- read qc
+     ivarname = 'qc'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpi(i,j,k) = var_in(i,j,k,1)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read qr
+     ivarname = 'qr'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read qi
+     ivarname = 'qi'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read qs
+     ivarname = 'qs'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+     end do
+     end do
+     end do
+!$omp end parallel do
+     ! --- read qg
+     ivarname = 'qg'
+     call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,j,k)
+     do k = 1, kmax, 1
+     do j = 1, jmax, 1
+     do i = 1, imax, 1
+        tmpi(i,j,k) = tmpi(i,j,k) + var_in(i,j,k,1)
+     end do
+     end do
+     end do
+!$omp end parallel do
 
   case ('cxtwater')
      ! The section for all water (qc+qr+qi+qc+qg) on the microphysics processes 5-10 km
@@ -4428,7 +4525,141 @@ program ncedit
      deallocate( x,y,z,time_in,var_in,tmp )
      if(debug_level.ge.100) print *, "Success: deallocate the allocated arrays"
      if(debug_level.ge.100) print *, ""
+
+  else if(flag.eq.9) then
+     ! xyz (3D output)
+     if(debug_level.ge.100) print *, "3D array"
+     !
+     allocate( ix(imax), iy(jmax), iz(ny) )
+     allocate( var_out3d(imax,jmax,ny) )
+     var_out3d(:,:,:) = nan
+     !
+     ! select one of the 3D array
+     select case (varname)
+     case ('water3d')
+        if(debug_level.ge.200) print *, "The tmp array has already allocated for ", trim(varname)
+        if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
+        tmpi(:,:,:) = tmpi(:,:,:)*real(1000.) ! unit: [kg/kg] -> [g/kg]
+     end select
+     if(debug_level.ge.200) print *, " tmpi(",xselect,",",yselect,",:)    = ", tmpi(xselect,yselect,:)
      
+     ! ix array
+     if(interp_x.eq.1) then
+        ! interpolate the stretched x-coordinate to constant dx coordinate
+        do k = 1, imax, 1
+           ix(k) = -real(((imax/2)*dx)-(dx/2)) + (k-1)*dx
+        end do
+     else
+        ix(:) = x(:)
+     end if
+     if(debug_level.ge.200) print *, " ix(:)         = ", ix
+     
+     ! iy array
+     if(interp_x.eq.1) then
+        ! interpolate the stretched x-coordinate to constant dy coordinate
+        do k = 1, jmax, 1
+           iy(k) = -real(((jmax/2)*dx)-(dx/2)) + (k-1)*dx
+        end do
+     else
+        iy(:) = y(:)
+     end if
+     if(debug_level.ge.200) print *, " iy(:)         = ", iy
+     
+     ! iz array
+     if(interp_y.eq.1) then
+        ! interpolate the stretched y-coordinate to constant dy coordinate
+        do k = 1, ny, 1
+           iz(k) = (k-1)*dy
+        end do
+        if(debug_level.ge.200) print *, " iz(:)         = ", iz
+        
+        if(iz(ny).gt.z(kmax)) then
+           print *, ""
+           print *, "ERROR: iz(ny) exceeds z(kmax)"
+           print *, "        iz(ny)  = ", iz(ny)
+           print *, "        z(kmax) = ", z(kmax)
+           print *, "       iz(ny) should be smaller than or equal to z(kmax)"
+           print *, "*** Please reduce the values of ny or dy ***"
+           print *, ""
+           stop 3
+        end if
+        
+        ! z coordinate points are linearly interpolated by interp_linear
+        do j = 1, jmax
+        do i = 1, imax
+           CALL interp_linear( kmax, ny, z, iz, tmpi(i,j,:), var_out3d(i,j,:), debug_level )
+        end do
+        end do
+     else
+        ! use the values of the original z-coordinate
+        iz(:) = z(:)
+        ! use original data 
+        var_out3d(:,:,:) = tmpi(:,:,:)
+     end if
+     if(debug_level.ge.200) print *, " var_out(",xselect,",",yselect,",:) = ", var_in(xselect,yselect,:,1)
+     
+     !ccccccccccccccccccccccccccccccccccccccccccccccccc
+     ! Output 3D file
+     !ccccccccccccccccccccccccccccccccccccccccccccccccc
+     ! create the file
+     select case (output_type)
+     case ('nc3')
+        call check( nf90_create(output, nf90_classic_model, ncid) )
+     case ('nc3_64bit')
+        call check( nf90_create(output, nf90_64bit_offset, ncid) )
+     case ('nc4')
+        call check( nf90_create(output, nf90_netcdf4, ncid) )
+     end select
+     if(debug_level.ge.100) print *, "Success: create the 3D output file"
+     
+     ! define the dimensions
+     if(debug_level.ge.100) print *, " Start: define mode"
+     call check( nf90_def_dim(ncid, "x", imax, xdimid) )
+     call check( nf90_def_dim(ncid, "y", jmax, ydimid) )
+     call check( nf90_def_dim(ncid, "z", ny, zdimid) )
+     if(debug_level.ge.100) print *, "  Success: define the dimensions"
+     
+     ! define the coordinate variables. 
+     call check( nf90_def_var(ncid, "x", NF90_REAL, xdimid, xvarid) )
+     call check( nf90_def_var(ncid, "y", NF90_REAL, ydimid, yvarid) )
+     call check( nf90_def_var(ncid, "z", NF90_REAL, zdimid, zvarid) )
+     if(debug_level.ge.100) print *, "  Success: define the coordinate variables"
+     
+     ! define the netCDF variables for the 2D data with compressed format(netcdf4).
+     select case (output_type)
+     case ('nc3','nc3_64bit')
+        call check( nf90_def_var(ncid, trim(varname), NF90_REAL, (/ xdimid, ydimid, zdimid /), varid) )
+     case ('nc4')
+        call check( nf90_def_var(ncid, trim(varname), NF90_REAL, (/ xdimid, ydimid, zdimid /), varid, &
+             chunksizes = (/ imax/2, jmax/2, ny /), shuffle = .TRUE., deflate_level = deflate_level) )
+     end select
+     if(debug_level.ge.100) print *, "  Success: define the netcdf variables"
+     
+     ! end define mode
+     call check( nf90_enddef(ncid) )
+     if(debug_level.ge.100) print *, " End: define mode"
+     
+     ! write the coordinate variable data
+     call check( nf90_put_var(ncid, xvarid, ix) )
+     call check( nf90_put_var(ncid, yvarid, iy) )
+     call check( nf90_put_var(ncid, zvarid, iz) )
+     if(debug_level.ge.100) print *, "Success: write the coordinate variable data"
+     
+     ! write the data array
+     call check( nf90_put_var(ncid, varid, var_out3d, start = (/ 1, 1, 1/), count = (/ imax, jmax, ny /)) )
+     if(debug_level.ge.100) print *, "Success: write the data array"
+     
+     ! close the file
+     call check( nf90_close(ncid) )
+     if(debug_level.ge.100) print *, "Success: close the netcdf file"
+     if(debug_level.ge.100) print *, ""
+     
+     ! deallocate the allocated arrays in this program
+     deallocate( ix,iy,var_out3d )
+     deallocate( x,y,z,time_in,var_in,tmpi )
+     if(debug_level.ge.100) print *, "Success: deallocate the allocated arrays"
+     if(debug_level.ge.100) print *, ""
+     !
   else
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! Output 2D netcdf file
@@ -4436,7 +4667,7 @@ program ncedit
      allocate( ix(nx), iy(ny) )
      allocate( var_out(nx,ny) )
      var_out(:,:) = nan
-
+     
      if(flag.eq.1) then
         ! x-y
         if(debug_level.ge.100) print *, "x-y array"
@@ -4455,7 +4686,7 @@ program ncedit
         end select
         if(debug_level.ge.200) print *, " tmp(",xselect,",",yselect,")    = ", tmp(xselect,yselect)
         var_out(:,:) = tmp(:,:)
-
+        
         ! ix array
         if(interp_x.eq.1) then
            ! interpolate the stretched x-coordinate to constant dx coordinate
@@ -4877,7 +5108,6 @@ program ncedit
      end if
      if(debug_level.ge.100) print *, ""
      
-     
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
      ! Output 2D file
      !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -4934,7 +5164,7 @@ program ncedit
      call check( nf90_close(ncid) )
      if(debug_level.ge.100) print *, "Success: close the netcdf file"
      if(debug_level.ge.100) print *, ""
-
+     
      ! deallocate the allocated arrays in this program
      deallocate( ix,iy,var_out )
      select case (flag)
@@ -4949,8 +5179,8 @@ program ncedit
      end select
      if(debug_level.ge.100) print *, "Success: deallocate the allocated arrays"
      if(debug_level.ge.100) print *, ""
-
-  end if
+     
+  end if ! txt or netcdf
   if(debug_level.ge.100) print *, "All done."
 
 
