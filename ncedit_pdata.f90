@@ -15,7 +15,7 @@ program ncedit_pdata
   real, dimension(:),   allocatable :: time
   real, dimension(:,:), allocatable :: x, z
   real, dimension(:,:), allocatable :: w, pwdt, vpga, buoy, load
-  real, dimension(:,:), allocatable :: th, prs, qv, thetae
+  real, dimension(:,:), allocatable :: th, prs, qv, thetae, thetav
   character(len=20) :: varname
   character(len=42) :: input, output
   integer :: debug_level
@@ -51,6 +51,7 @@ program ncedit_pdata
   allocate( x(nparcel,tmax),z(nparcel,tmax),w(nparcel,tmax) )
   allocate( pwdt(nparcel,tmax),vpga(nparcel,tmax),buoy(nparcel,tmax),load(nparcel,tmax) )
   allocate( th(nparcel,tmax),prs(nparcel,tmax),qv(nparcel,tmax),thetae(nparcel,tmax) )
+  allocate( thetav(nparcel,tmax) )
   istart = (/ 1, 1 /)
   icount = (/ nparcel, tmax /)
   x(1:nparcel,1:tmax) = nan
@@ -64,6 +65,7 @@ program ncedit_pdata
   prs(1:nparcel,1:tmax) = nan
   qv(1:nparcel,1:tmax)  = nan
   thetae(1:nparcel,1:tmax) = nan
+  thetav(1:nparcel,1:tmax) = nan
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -195,10 +197,17 @@ program ncedit_pdata
         ! calculate equivalent potential temperature [K]
         tmp0 = thetaP_2_T( th(i,t), prs(i,t) ) ! temperature [degree C]
         thetae(i,t) = thetae_Bolton( tmp0, qv(i,t), prs(i,t) )
+        ! calculate virtual potential temperature [K]
+!        thetav(i,t) = TqvP_2_thetav( tmp0, qv(i,t), prs(i,t) )
+        ! calculate thetav using the definition: thetav = theta*(1+0.61q)
+        thetav(i,t) = th(i,t)*( 1+0.61*qv(i,t) ) ! using the definition: thetav = theta*(1+0.61q)
         write(20,111) time(t)/real(3600.), x(i,t)*0.001, z(i,t)*0.001,    &
                       w(i,t), pwdt(i,t), vpga(i,t), buoy(i,t), load(i,t), &
-                      thetae(i,t)
-        if(debug_level.ge.200) print 222, "t,time_out,var_outs = ",t,time(t)/real(3600.),x(i,t)*0.001,z(i,t)*0.001, w(i,t), pwdt(i,t), vpga(i,t), buoy(i,t), load(i,t), thetae(i,t)
+                      thetae(i,t), thetav(i,t)
+        if(debug_level.ge.200) print 222, "t,time_out,var_outs = ", &
+             t,time(t)/real(3600.),x(i,t)*0.001,z(i,t)*0.001,       &
+             w(i,t), pwdt(i,t), vpga(i,t), buoy(i,t), load(i,t),    &
+             thetae(i,t), thetav(i,t)
      end do
      close(20)
   end do
@@ -206,8 +215,8 @@ program ncedit_pdata
   if(debug_level.ge.100) print *, ""
 
   ! formats
-111 format(f8.3,8f18.8)
-222 format(a23,i5,f8.3,7f18.8)
+111 format(f8.3,9f18.8)
+222 format(a23,i5,f8.3,8f18.8)
 
   ! deallocate the allocated arrays in this program
   deallocate( time,x,z )
@@ -366,5 +375,52 @@ contains
     
     return
   end function thetaP_2_T
+
+  real function TqvP_2_thetav( T, qv, P )  ! 温度, 水蒸気混合比, 圧力から仮温位を計算する.
+    implicit none
+    real, intent(in) :: qv  ! 水蒸気混合比 [kg / kg]
+    real, intent(in) :: T   ! 温度 [K]
+    real, intent(in) :: P   ! 圧力 [Pa]
+    real :: kappa, Tv
+    real, parameter :: Rd=287.0
+    real, parameter :: Cpd=1004.0
+
+    kappa=Rd/Cpd
+    Tv=qvT_2_Tv(qv,T)
+    TqvP_2_thetav=theta_dry(Tv,P)
+    
+    return
+  end function TqvP_2_thetav
+
+  real function qvT_2_Tv( qv, T )  ! 温度と水蒸気混合比から仮温度を計算する.
+    implicit none
+    real, intent(in) :: qv  ! 水蒸気混合比 [kg / kg]
+    real, intent(in) :: T   ! 温度 [K]
+    real :: eps
+    real, parameter :: Rd=287.0
+    real, parameter :: Rv=461.0
+    
+    eps=Rd/Rv
+    qvT_2_Tv=T*(1.0+qv/eps)/(1.0+qv)
+    
+    return
+  end function qvT_2_Tv
+
+  real function theta_dry( T, P )  ! 乾燥大気における温位を計算する
+    ! ただし, 湿潤大気においても, 観測される全圧を P として計算することができ
+    ! その結果は別関数 theta_moist の結果とそれほど変わらない.
+    implicit none
+    real, intent(in) :: T  ! 温度 [K]
+    real, intent(in) :: P  ! 乾燥大気の気圧(もしくは, 湿潤大気の全圧) [Pa]
+    real :: kappa
+    real, parameter :: Rd=287.0
+    real, parameter :: Cpd=1004.0
+    real, parameter :: p0=1.0e5
+
+    kappa=Rd/Cpd
+    theta_dry=T*(p0/P)**kappa
+    
+    return
+  end function theta_dry
 
 end program ncedit_pdata
