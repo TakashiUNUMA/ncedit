@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2015/01/08
+! last modified: 2015/01/09
 !
 
 program ncedit
@@ -663,7 +663,26 @@ program ncedit
         ista = imax/2 + 11 ! which is reffered to X = +10 km in the X cordinate
         iend = imax/2 + 50 ! which is reffered to X = +50 km in the X cordinate
         allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
-        istart = (/ 1, 1, 1, 1 /)
+        istart = (/ 1, 1, 1, 1 /) ! this array will be replaced during the z loop, so that 'istart' is a temporal array
+        icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
+        allocate( tmp(kmax,11) )
+        tmp(1:kmax,11) = 0.
+        allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax),tmp4(imax,jmax) )
+        tmp1(1:imax,1:jmax) = 0.
+        tmp2(1:imax,1:jmax) = 0.
+        tmp3(1:imax,1:jmax) = 0.
+        tmp4(1:imax,1:jmax) = 0.
+        allocate( tmpi(imax,jmax,11) )
+        tmpi(1:imax,1:jmax,11) = 0.
+     case ('spmaul')
+        ! To check whether MAUL (Moist Absolutely Unstable Layers) exists or not at the specified grid point
+        inx = imax
+        iny = jmax
+        inz = 1
+        int = 1
+        allocate( var_in(imax,jmax,1,1) ) ! xy + z-loop
+        istart = (/ 1, 1, 1, 1 /) ! this array will be replaced during the z loop, so that 'istart' is a temporal array
         icount = (/ imax, jmax, 1, 1 /)
         var_in(1:imax,1:jmax,1,1) = nan
         allocate( tmp(kmax,11) )
@@ -3209,7 +3228,7 @@ program ncedit
            ! pres [hPa]
            tmpi(i,j,1) = tmp1(i,j)*real(0.01)
            ! hght [m]
-           tmpi(i,j,2) = z(k)*real(100.)
+           tmpi(i,j,2) = z(k)*real(1000.)
            ! temp [degree C]
            tmpi(i,j,3) = thetaP_2_T( tmp2(i,j), tmp1(i,j) ) - t0
            ! dwpt [degree C]
@@ -3248,6 +3267,85 @@ program ncedit
                 tmp(k,2),tmp(k,3),tmp(k,4),tmp(k,5),tmp(k,6),   &
                 tmp(k,7),tmp(k,8),tmp(k,9),tmp(k,10),tmp(k,11)
      end do ! end of k-loop
+     ! calculate mucape
+     CALL getcape( 3,kmax,tmp(:,1),tmp(:,3),(tmp(:,6)*real(0.001)), &
+                   gbcape,gbcin,gblclp,gblfcp,gblnbp, &
+                   gblclz,gblfcz,gblnbz,debug_level,1 )
+     print *, " mucape,lfc,lnb = ", gbcape,gblfcz,gblnbz
+
+  case ('spmaul')
+     ! To check whether MAULs exist or not at the specified grid point
+     ! The output arrays depend on {x,y,t}select
+     ! *** this section work with flag = 4 ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     do k = 1, kmax, 1
+        istart = (/ 1, 1, k, tselect /)
+        ! --- read prs [Pa]
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp1(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read theta [K]
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp2(i,j) = var_in(i,j,1,1)
+        end do
+        end do
+        ! --- read qv [kg/kg]
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp3(i,j) = var_in(i,j,1,1) ! qv [kg/kg]
+           ! pres [hPa]
+           tmpi(i,j,1) = tmp1(i,j)*real(0.01)
+           ! hght [m]
+           tmpi(i,j,2) = z(k)*real(1000.)
+           ! temp [degree C]
+           tmpi(i,j,3) = thetaP_2_T( tmp2(i,j), tmp1(i,j) ) - t0
+           ! dwpt [degree C]
+           tmp0 = qvP_2_e( tmp3(i,j), tmp1(i,j) )
+           tmpi(i,j,4) = es_TD(tmp0) - t0
+           ! RELT [%]
+           tmp0 = thetaP_2_T( tmp2(i,j), tmp1(i,j) )
+           tmpi(i,j,5) = qvTP_2_RH( tmp3(i,j), tmp0, tmp1(i,j) )
+           ! MIXR [g/kg]
+           tmpi(i,j,6) = tmp3(i,j)*real(1000.)
+           ! DRCT [deg]
+           tmpi(i,j,7) = 0. ! dummy
+           ! SKNT [knot]
+           tmpi(i,j,8) = 0. ! dummy
+           ! THTA [K]
+           tmpi(i,j,9) = tmp2(i,j)
+           ! THTE [K]
+           tmp0 = thetaP_2_T( tmp2(i,j), tmp1(i,j) )
+           tmpi(i,j,10) = thetae_Bolton( tmp0, tmp3(i,j), tmp1(i,j) )
+           ! THTV [K]
+           tmpi(i,j,11) = tmp2(i,j)*( 1+0.61*tmp3(i,j) )
+        end do
+        end do
+        ! create arrays at the specified grid point (xselect,yselect,:,tselect)
+        do l = 1, 11, 1
+           tmp(k,l) = tmpi(xselect,yselect,l)
+        end do
+        print '(a37,f7.1,f7.0,2f7.1,f7.0,f7.2,2f7.0,3f7.1)',    &
+             "  p,z,tc,td,rh,qv,wd,ws,th,the,thv = ", tmp(k,1), &
+                tmp(k,2),tmp(k,3),tmp(k,4),tmp(k,5),tmp(k,6),   &
+                tmp(k,7),tmp(k,8),tmp(k,9),tmp(k,10),tmp(k,11)
+     end do ! end of k-loop
+     ! calculate mucape
+     CALL getcape( 3,kmax,tmp(:,1),tmp(:,3),(tmp(:,6)*real(0.001)), &
+                   gbcape,gbcin,gblclp,gblfcp,gblnbp, &
+                   gblclz,gblfcz,gblnbz,debug_level,1 )
+     print *, " mucape,lfc,lnb = ", gbcape,gblfcz,gblnbz
 
   case ('vcape')
      ! A area-averaged value of the vertical profile of CAPE
@@ -4682,22 +4780,26 @@ program ncedit
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
         end do
+        !
      case ('tlfcave','tlnbave')
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1) !*real(0.001) ! unit: [m] -> [km]
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1) !*real(0.001) ! unit: [m] -> [km]
         end do
+        !
      case ('vtotwcave','vtotwcstd','vqvave','vqvavec','vqv')
         if(debug_level.ge.200) print *, " unit: [kg/kg] -> [g/kg]"
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)*real(1000.) ! unit: [kg/kg] -> [g/kg]
         end do
+        !
      case ('vwmax','vwave')
         do k = 1, kmax, 1
            write(20,111) z(k), tmp(k,1) ! unit: [m/s]
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1) ! unit: [m/s]
         end do
+        !
      case ('vthetaeave','vthetaave','vthetaeavec','vrhave','vrhavec',       &
            'vtheta','vthetav','vthetavca','vthetae','vthetaeca','vthetaes', &
            'vcape','vcapeca')
@@ -4705,13 +4807,14 @@ program ncedit
            write(20,111) z(k), tmp(k,1)
            if(debug_level.ge.200) print 222, "k,z,var = ", k, z(k), tmp(k,1)
         end do
-     case ('maul')
+        !
+     case ('maul','spmaul')
         write(20,'(a5)') "00000"
         write(20,'(a1)') ""
-        write(20,'(a76)') "----------------------------------------------------------------------------"
+        write(20,'(a76)') "-----------------------------------------------------------------------------"
         write(20,'(a76)') "   PRES   HGHT   TEMP   DWPT   RELT   MIXR   DRCT   SKNT   THTA   THTE   THTV"
         write(20,'(a76)') "    hPa     m      C      C      %    g/kg    deg   knot     K      K      K "
-        write(20,'(a76)') "----------------------------------------------------------------------------"
+        write(20,'(a76)') "-----------------------------------------------------------------------------"
         do k = 1, kmax, 1
            write(20,113) tmp(k,1),tmp(k,2),tmp(k,3),tmp(k,4),tmp(k,5), &
                 tmp(k,6),tmp(k,7),tmp(k,8),tmp(k,9),tmp(k,10),tmp(k,11)
@@ -4720,6 +4823,11 @@ program ncedit
                 tmp(k,2),tmp(k,3),tmp(k,4),tmp(k,5),tmp(k,6),   &
                 tmp(k,7),tmp(k,8),tmp(k,9),tmp(k,10),tmp(k,11)
         end do
+        write(20,'(a1)') ""
+        write(20,'(a33)') " muCAPE muCIN muLCL muLFC muLNB "
+        write(20,'(a33)') "   J/kg  J/kg    m     m     m  "
+        write(20,'(5f10.2)') gbcape,gbcin,gblclz,gblfcz,gblnbz
+        !
      case ('webdymf','snbdymf','webdyqvf')
         do t = 1, tmax, 1
            write(20,112) real(time_in(t)/dble(60.)), tmp(t,1),tmp(t,2),tmp(t,3),tmp(t,4)
