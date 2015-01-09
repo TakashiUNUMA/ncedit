@@ -2,7 +2,7 @@
 ! N C E D I T (pdata)
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! Last modified: 2015/01/04
+! Last modified: 2015/01/09
 !
 
 program ncedit_pdata
@@ -16,6 +16,7 @@ program ncedit_pdata
   real, dimension(:,:), allocatable :: x, z
   real, dimension(:,:), allocatable :: w, pwdt, vpga, buoy, load
   real, dimension(:,:), allocatable :: th, prs, qv, thetae, thetav
+  real, dimension(:,:), allocatable :: skewt
   character(len=20) :: varname
   character(len=42) :: input, output
   integer :: debug_level
@@ -24,6 +25,7 @@ program ncedit_pdata
   integer :: i, t, ncid, varid, tdimid
   integer, dimension(2) :: istart, icount
   real :: tmp0
+  real, parameter :: t0 = 273.15
 
   ! undefined value
 !  real :: nan = -9999.
@@ -52,6 +54,7 @@ program ncedit_pdata
   allocate( pwdt(nparcel,tmax),vpga(nparcel,tmax),buoy(nparcel,tmax),load(nparcel,tmax) )
   allocate( th(nparcel,tmax),prs(nparcel,tmax),qv(nparcel,tmax),thetae(nparcel,tmax) )
   allocate( thetav(nparcel,tmax) )
+  allocate( skewt(tmax,11) )
   istart = (/ 1, 1 /)
   icount = (/ nparcel, tmax /)
   x(1:nparcel,1:tmax) = nan
@@ -66,6 +69,7 @@ program ncedit_pdata
   qv(1:nparcel,1:tmax)  = nan
   thetae(1:nparcel,1:tmax) = nan
   thetav(1:nparcel,1:tmax) = nan
+  skewt(1:tmax,1:11) = 0.
 
 
   !ccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -211,6 +215,53 @@ program ncedit_pdata
      end do
      close(20)
   end do
+  ! output for skewt plot
+  do i = 1, nparcel, 1
+     write (output, '("skewt_", i3.3, ".txt")') i
+     open(21, file=output, status='replace')
+     if(debug_level.ge.100) print *, " Success: open the output file as ",trim(output)
+     write(21,'(a5)') "00000"
+     write(21,'(a1)') ""
+     write(21,'(a76)') "-----------------------------------------------------------------------------"
+     write(21,'(a76)') "   PRES   HGHT   TEMP   DWPT   RELT   MIXR   DRCT   SKNT   THTA   THTE   THTV"
+     write(21,'(a76)') "    hPa     m      C      C      %    g/kg    deg   knot     K      K      K "
+     write(21,'(a76)') "-----------------------------------------------------------------------------"
+!     do t = 1, tmax, 1
+     do t = 361, 361+130-1, 1
+        ! pres [hPa]
+        skewt(t,1) = prs(i,t)*real(0.01)
+        ! hght [m]
+        skewt(t,2) = z(i,t)
+        ! temp [degree C]
+        skewt(t,3) = thetaP_2_T( th(i,t), prs(i,t) ) - t0
+        ! dwpt [degree C]
+        tmp0 = qvP_2_e( qv(i,t), prs(i,t) )
+        skewt(t,4) = es_TD(tmp0) - t0
+        ! RELT [%]
+        tmp0 = thetaP_2_T( th(i,t), prs(i,t) )
+        skewt(t,5) = qvTP_2_RH( qv(i,t), tmp0, prs(i,t) )
+        ! MIXR [g/kg]
+        skewt(t,6) = qv(i,t)*real(1000.)
+        ! DRCT [deg]
+        skewt(t,7) = 0. ! dummy
+        ! SKNT [knot]
+        skewt(t,8) = 0. ! dummy
+        ! THTA [K]
+        skewt(t,9) = th(i,t)
+        ! THTE [K]
+        tmp0 = thetaP_2_T( th(i,t), prs(i,t) )
+        skewt(t,10) = thetae_Bolton( tmp0, qv(i,t), prs(i,t) )
+        ! THTV [K]
+        skewt(t,11) = th(i,t)*( 1+0.61*qv(i,t) )
+        ! writeout
+        write(21,'(f7.1,f7.0,2f7.1,f7.0,f7.2,2f7.0,3f7.1)') &
+             skewt(t,1),skewt(t,2),skewt(t,3),skewt(t,4),   &
+             skewt(t,5),skewt(t,6),skewt(t,7),skewt(t,8),   &
+             skewt(t,9),skewt(t,10),skewt(t,11)
+     end do
+     close(21)
+  end do
+
   if(debug_level.ge.100) print *, "Success: write out data to the output file"
   if(debug_level.ge.100) print *, ""
 
@@ -346,6 +397,33 @@ contains
     return
   end function es_Bolton
 
+  real function eT_2_RH( e, T )  ! 水蒸気圧と温度から相対湿度を計算する
+    ! $RH=(e/es)\times 100$ という定義から計算.
+    implicit none
+    real, intent(in) :: e  ! 水蒸気圧 [Pa]
+    real, intent(in) :: T  ! 温度 [K]
+    real :: es
+    
+    es=es_Bolton(T)
+    eT_2_RH=100.0*e/es
+    
+    return
+  end function eT_2_RH
+
+  real function qvTP_2_RH( qv, T, P )  ! 混合比と温度から相対湿度を計算する.
+    ! qvP_2_e から水蒸気圧を計算し, 相対湿度の定義を用いる.
+    implicit none
+    real, intent(in) :: qv  ! 相対湿度 [kg / kg]
+    real, intent(in) :: T   ! 温度 [K]
+    real, intent(in) :: P   ! 全圧 [Pa]
+    real :: e
+    
+    e=qvP_2_e(qv,P)
+    qvTP_2_RH=eT_2_RH(e,T)
+    
+    return
+  end function qvTP_2_RH
+
   real function eP_2_qv( e, P )  ! 水蒸気圧と全圧から混合比を計算する
     implicit none
     real, intent(in) :: e  ! 水蒸気圧 [Pa]
@@ -422,5 +500,22 @@ contains
     
     return
   end function theta_dry
+
+  real function es_TD(e)  ! es_Bolton を用いて飽和水蒸気圧の計算式の逆算から
+    ! 露点温度を計算する.
+    implicit none
+    real, intent(in) :: e  ! 大気の水蒸気圧 [Pa]
+    real, parameter :: a=17.67, c=29.65
+    real, parameter :: e0=611.0
+    real, parameter :: t0=273.15
+    
+    if(e>0.0)then
+       es_TD=c+(a*(t0-c))/(a-log(e/e0))
+    else
+       es_TD=t0  ! true ??
+    end if
+    
+    return
+  end function es_TD
 
 end program ncedit_pdata
