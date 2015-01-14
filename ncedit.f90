@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2015/01/09
+! last modified: 2015/01/14
 !
 
 program ncedit
@@ -274,6 +274,15 @@ program ncedit
         int = 1
         allocate( var_in(imax,jmax,1,1) ) ! xy
         istart = (/ 1, 1, tselect, 1 /)
+        icount = (/ imax, jmax, 1, 1 /)
+        var_in(1:imax,1:jmax,1,1) = nan
+     case ('water')
+        inx = imax
+        iny = jmax
+        inz = 1
+        int = 1
+        allocate( var_in(imax,jmax,1,1) ) ! xy
+        istart = (/ 1, 1, zselect, tselect /)
         icount = (/ imax, jmax, 1, 1 /)
         var_in(1:imax,1:jmax,1,1) = nan
      case default
