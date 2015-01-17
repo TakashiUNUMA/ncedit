@@ -2,7 +2,7 @@
 ! N C E D I T
 !
 ! original program coded by Takashi Unuma, Kyoto Univ.
-! last modified: 2015/01/14
+! last modified: 2015/01/17
 !
 
 program ncedit
@@ -568,6 +568,8 @@ program ncedit
         int = 1
         ista = imax/2      ! which is reffered to X = 0 km in the X cordinate
         iend = imax/2 + 20 ! which is reffered to X = +20 km in the X cordinate
+        jsta = jmax/2 - 10 ! which is reffered to Y = -10 km in the Y cordinate
+        jend = jmax/2 + 10 ! which is reffered to Y = +10 km in the Y cordinate
         allocate( var_in(imax,jmax,tmax,1) ) ! xyt
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, tmax, 1 /)
@@ -796,6 +798,31 @@ program ncedit
         tmp3(1:imax,1:tmax) = 0.
         tmp4(1:imax,1:tmax) = 0.
         allocate( itmp1(kmax),itmp2(kmax),itmp3(kmax) )
+     case ('tcapeave3d','tcinave3d','tlfcave3d','tlnbave3d')
+        ! for calculation of CAPE using getcape for a 3-D output
+        inx = imax
+        iny = jmax
+        inz = kmax
+        int = 1
+        allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
+        istart = (/ 1, 1, 1, 1 /)            ! this value will be replaced during t-loop
+        icount = (/ imax, jmax, kmax, 1 /)
+        var_in(1:imax,1:jmax,1:kmax,1) = nan
+        allocate( tmpc1(imax,jmax,kmax),tmpc2(imax,jmax,kmax),tmpc3(imax,jmax,kmax) )
+        tmpc1(1:imax,1:jmax,1:kmax) = 0.
+        tmpc2(1:imax,1:jmax,1:kmax) = 0.
+        tmpc3(1:imax,1:jmax,1:kmax) = 0.
+        allocate( tmp(tmax,1) )
+        tmp(1:tmax,1) = 0.
+        allocate( tmp1(imax,jmax),tmp2(imax,jmax),tmp3(imax,jmax),tmp4(imax,jmax) )
+        tmp1(1:imax,1:jmax) = 0.
+        tmp2(1:imax,1:jmax) = 0.
+        tmp3(1:imax,1:jmax) = 0.
+        tmp4(1:imax,1:jmax) = 0.
+        allocate( itmp1(kmax),itmp2(kmax),itmp3(kmax) )
+        itmp1(1:kmax) = 0.
+        itmp2(1:kmax) = 0.
+        itmp3(1:kmax) = 0.
      case ('tcapeaveus')
         ! for calculation of upstream CAPE using getcape
         inx = imax
@@ -916,8 +943,10 @@ program ncedit
         int = 1
         ista = imax/2 +  1 ! which is reffered to X = 1 km in the X cordinate
         iend = imax/2 + 50 ! which is reffered to X = 50 km in the X cordinate
-        jsta = jmax/2 - 30 ! which is reffered to Y = -30 km in the Y cordinate
-        jend = jmax/2 + 30 ! which is reffered to Y = +30 km in the Y cordinate
+        jsta = jmax/2 - 10 ! which is reffered to Y = -10 km in the Y cordinate
+        jend = jmax/2 + 10 ! which is reffered to Y = +10 km in the Y cordinate
+!        jsta = jmax/2 - 30 ! which is reffered to Y = -30 km in the Y cordinate
+!        jend = jmax/2 + 30 ! which is reffered to Y = +30 km in the Y cordinate
         allocate( var_in(imax,jmax,kmax,1) ) ! xyz + t-loop
         istart = (/ 1, 1, 1, 1 /)
         icount = (/ imax, jmax, kmax, 1 /)
@@ -3852,6 +3881,8 @@ program ncedit
      ! --- read prs [Pa]
      ivarname = 'prs'
      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
      do t = 1, tmax, 1
      do k = 1, kmax, 1
      do i = 1, imax, 1
@@ -3859,9 +3890,12 @@ program ncedit
      end do
      end do
      end do
+!$omp end parallel do
      ! --- read theta [K]
      ivarname = 'th'
      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
      do t = 1, tmax, 1
      do k = 1, kmax, 1
      do i = 1, imax, 1
@@ -3871,9 +3905,12 @@ program ncedit
      end do
      end do
      end do
+!$omp end parallel do
      ! --- read qv [kg/kg]
      ivarname = 'qv'
      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp parallel do default(shared) &
+!$omp private(i,k,t)
      do t = 1, tmax, 1
      do k = 1, kmax, 1
      do i = 1, imax, 1
@@ -3881,6 +3918,7 @@ program ncedit
      end do
      end do
      end do
+!$omp end parallel do
      ! --- thpert [K]
      ivarname = 'thpert'
      call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
@@ -3940,6 +3978,258 @@ program ncedit
         end if
         if(debug_level.ge.100) print *, "  t,",trim(varname)," = ",t,tmp(t,1)
      end do
+
+  case ('tcapeave3d','tcinave3d','tlfcave3d','tlnbave3d')
+     ! Calculate as following variables:
+     !  - mixed-layer convective available potential energy [J kg-1]
+     !  - mixed-layer convective inhibition [J kg-1]
+     !  - lebel of free convection [m]
+     !  - lebel of neutral buoyancy [m]
+     ! for a 3-D output
+     ! *** this section work with flag = 4 only (for now) ***
+     if(flag.ne.4) then
+        print *, "WARNING: flag = ", flag, "is under construction for now..."
+        stop 2
+     end if
+     !---------- under construction ----------
+!$omp parallel default(shared)
+     do t = 1, tmax, 1
+!        if(debug_level.ge.100) print *, " t = ", t
+        istart = (/ 1, 1, 1, t /)        
+        ! --- read prs [Pa]
+!$omp single
+        ivarname = 'prs'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp end single
+!$omp do private(i,j,k,tmp0)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc1(i,j,k) = var_in(i,j,k,1)*real(0.01) ! unit: [hPa]
+        end do
+        end do
+        end do
+!$omp end do
+        ! --- read theta [K]
+!$omp single
+        ivarname = 'th'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp end single
+!$omp do private(i,j,k,tmp0)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmp0 = var_in(i,j,k,1)
+           ! calculate temperature [degree C] using theta [K] and pressure [Pa]
+           tmpc2(i,j,k) = thetaP_2_T( tmp0, tmpc1(i,j,k)*100. ) - t0 ! unit: [degree C]
+        end do
+        end do
+        end do
+!$omp end do
+        ! --- read qv [kg/kg]
+!$omp single
+        ivarname = 'qv'
+        call getncvar( ivarname, inx, iny, inz, int, ncid, varid, var_in, istart, icount, debug_level )
+!$omp end single
+!$omp do private(i,j,k,tmp0)
+        do k = 1, kmax, 1
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           tmpc3(i,j,k) = var_in(i,j,k,1)
+        end do
+        end do
+        end do
+!$omp end do
+        ! calculate mlCAPE, mlCIN, LFC, and LNB using 16-thread OpenMP
+!$omp sections
+!$omp section
+        ! 1
+        do j = 1, 8, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 2
+        do j = 9, 16, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 3
+        do j = 17, 24, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 4
+        do j = 25, 32, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 5
+        do j = 33, 40, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 6
+        do j = 41, 48, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 7
+        do j = 49, 56, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 8
+        do j = 57, 64, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 9
+        do j = 65, 72, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 10
+        do j = 73, 80, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 11
+        do j = 81, 88, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 12
+        do j = 89, 96, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 13
+        do j = 97, 104, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 14
+        do j = 105, 112, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 15
+        do j = 113, 120, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp section
+        ! 16
+        do j = 121, 128, 1
+        do i = 1, imax, 1
+           CALL getcape( 3,kmax,tmpc1(i,j,:),tmpc2(i,j,:),tmpc3(i,j,:),   &
+                         tmp1(i,j),tmp2(i,j),gblclp,gblfcp,gblnbp,gblclz, &
+                         tmp3(i,j),tmp4(i,j),debug_level,1                )
+        end do ! end of j-loop
+        end do ! end of i-loop
+!$omp end sections
+        ! check outputs
+!$omp single
+        i = 256
+        j = 64
+        print '(a24,i5,4f10.2)', "   t,cape,cin,lfc,lnb = ", t, tmp1(i,j),tmp2(i,j),tmp3(i,j),tmp4(i,j)
+        ! calc. area-averaged value
+        ipoint = 0
+        tmp0 = 0.
+        do j = 1, jmax, 1
+        do i = 1, imax, 1
+           select case (varname)
+           case ('tcapeave3d')
+              if(tmp1(i,j).gt.0.) then
+                 tmp0 = tmp0 + tmp1(i,j)
+                 ipoint = ipoint + 1
+              end if
+           case ('tcinave3d')
+              if(tmp2(i,j).gt.0.) then
+                 tmp0 = tmp0 + tmp2(i,j)
+                 ipoint = ipoint + 1
+              end if
+           case ('tlfcave3d')
+              if(tmp3(i,j).gt.0.) then
+                 tmp0 = tmp0 + tmp3(i,j)
+                 ipoint = ipoint + 1
+              end if
+           case ('tlnbave3d')
+              if(tmp4(i,j).gt.7000.) then
+                 tmp0 = tmp0 + tmp4(i,j)
+                 ipoint = ipoint + 1
+              end if
+           end select
+        end do ! end of i-loop
+        end do ! end of j-loop
+        if(ipoint.gt.0) then
+           tmp(t,1) = tmp0/real(ipoint)
+        else
+           tmp(t,1) = 0.
+        end if
+        if(debug_level.ge.100) print *, "  t,",trim(varname)," = ",t,tmp(t,1)
+!$omp end single
+     end do ! end of t-loop
+!$omp end parallel
 
   case ('tpwave','tpwaveus')
      ! Calculate as following variables:
@@ -4790,7 +5080,13 @@ program ncedit
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
         end do
         !
-     case ('tlfcave','tlnbave')
+     case ('tcapeave3d','tcinave3d')
+        do t = 1, tmax, 1
+           write(20,111) real(time_in(t)/dble(60.)), tmp(t,1)
+           if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1)
+        end do
+        !
+     case ('tlfcave','tlnbave','tlfcave3d','tlnbave3d')
         do t = 1, tmax, 1
            write(20,111) real(time_in(t)/dble(60.)), tmp(t,1) !*real(0.001) ! unit: [m] -> [km]
            if(debug_level.ge.200) print 222, "t,time,var = ", t, real(time_in(t)/dble(60.)), tmp(t,1) !*real(0.001) ! unit: [m] -> [km]
@@ -6634,6 +6930,9 @@ contains
         endif
         cin  = cin  + narea
         narea = 0.0
+        ! calculate LFC (for low-to-mid level inversion)
+        zlfc = z(k-1)+(z(k)-z(k-1))*(0.0-b1)/(b2-b1)
+        plfc = p(k-1)+(p(k)-p(k-1))*(0.0-b1)/(b2-b1)
       elseif( (b2.lt.0.0) .and. (b1.gt.0.0) )then
         ! first trip into neg area
         ps = p(k-1)+(p(k)-p(k-1))*(0.0-b1)/(b2-b1)
@@ -6655,6 +6954,9 @@ contains
         ! still collecting positive buoyancy
         parea =  0.5*dz*(b1+b2)
         narea =  0.0
+        ! calculate EL (for low-to-mid level inversion)
+        zel = z(k-1)+(z(k)-z(k-1))*(0.0-b1)/(b2-b1)
+        pel = p(k-1)+(p(k)-p(k-1))*(0.0-b1)/(b2-b1)
       endif
 
       cape = cape + max(0.0,parea)
