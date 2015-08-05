@@ -169,7 +169,7 @@ ncedit.f90 は、
 
 # 謝辞
 - 辻野 智紀 氏が開発している、[数値解析用 Fortran 90 ライブラリ (STPK)](http://www.gfd-dennou.org/library/davis/stpk/) の一部を使用させていただきました。
-- Gorge Bryan 氏の CAPE 計算サブルーチン (getcape.F) を使用させていただきました。
+- George Bryan 氏の CAPE 計算サブルーチン (getcape.F) を使用させていただきました。
 
 関係者各位に感謝申し上げます。
 
